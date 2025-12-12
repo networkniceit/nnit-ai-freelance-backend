@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Payment Successful - NNIT AI Freelancer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f3f4f6;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 60px auto;
+            padding: 40px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2563eb;
+            margin-bottom: 20px;
+        }
+
+        .owner {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .success-icon {
+            font-size: 60px;
+            margin: 20px 0;
+        }
+
+        h1 {
+            color: #111;
+            margin: 20px 0;
+            font-size: 32px;
+        }
+
+        .session-id {
+            background: #f0f9ff;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+            color: #0369a1;
+            word-break: break-all;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: #fff;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">NNIT AI Freelancer</div>
+        <div class="owner">by Network Nice IT Tec</div>
+        <div class="success-icon">✅</div>
+        <h1>Payment Successful!</h1>
+        <p>Thank you for your payment. Your subscription is now active.</p>
+        <div class="session-id">
+            Session ID: <span id="sessionId">Loading...</span>
+        </div>
+        <a href="/" class="btn">Return to Dashboard</a>
+    </div>
+    <script>
+        const sessionId = new URL(window.location).searchParams.get('session_id');
+        document.getElementById('sessionId').textContent = sessionId || 'N/A';
+    </script>
+</body>
+
+</html>
