@@ -1,0 +1,31 @@
+{
+  "name": "ai-freelance-backend",
+  "version": "1.0.1",
+  "description": "AI-powered freelance automation backend for Network Nice IT Tec",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "freelance",
+    "ai",
+    "automation",
+    "upwork"
+  ],
+  "author": "Network Nice IT Tec",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "openai": "^4.20.0",
+    "rss-parser": "^3.13.0",
+    "sqlite3": "^5.1.6",
+    "stripe": "^20.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

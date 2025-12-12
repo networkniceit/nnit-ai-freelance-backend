@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NNIT AI Freelancer Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .company {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        button.secondary:hover {
+            background: #e0e0e0;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        #jobs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .job {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .job h3 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .job .meta {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .job .actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .job button {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        #direct {
+            grid-column: 1 / -1;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        #d_result {
+            background: #111;
+            color: #d6f8d6;
+            padding: 12px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .footer {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <div class="logo">NNIT AI Freelancer</div>
+                <div class="company">Network Nice IT Tec</div>
+            </div>
+            <div class="controls">
+                <button onclick="scrapeJobs()">🔍 Scrape Jobs</button>
+                <button class="secondary" onclick="refreshJobs()">↻ Refresh</button>
+                <button class="secondary" onclick="window.location.href='/checkout.html'">💳 Checkout</button>
+            </div>
+        </header>
+
+        <main>
+            <section id="jobsSection">
+                <h2>Available Jobs</h2>
+                <div id="jobs" class="loading">Loading jobs...</div>
+            </section>
+
+            <section id="statsSection">
+                <h2>Statistics</h2>
+                <div class="stats" id="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalEarnings">$0</div>
+                        <div class="stat-label">Total Earnings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="activeJobs">0</div>
+                        <div class="stat-label">Active Jobs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedJobs">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="successRate">0%</div>
+                        <div class="stat-label">Success Rate</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="direct">
+                <h2>Generate Direct Proposal</h2>
+                <input id="d_title" type="text" placeholder="Job title" />
+                <textarea id="d_desc" placeholder="Job description" rows="3"></textarea>
+                <input id="d_budget" type="text" placeholder="Budget (optional)" />
+                <button onclick="generateDirect()">✨ Generate Proposal</button>
+                <pre id="d_result"></pre>
+            </section>
+        </main>
+
+        <div class="footer">
+            © 2025 Network Nice IT Tec | NNIT AI Freelancer Platform |
+            <a href="/api/health">API Status</a>
+        </div>
+    </div>
+
+    <script>
+        async function api(path, opts = {}) {
+            try {
+                const res = await fetch(path, opts);
+                return await res.json();
+            } catch (e) {
+                console.error('API Error:', e);
+                return { error: e.message };
+            }
+        }
+
+        async function loadJobs() {
+            const el = document.getElementById('jobs');
+            el.innerHTML = '<div class="loading">Loading...</div>';
+            const data = await api('/api/jobs');
+
+            if (!data.jobs || data.jobs.length === 0) {
+                el.innerHTML = '<div class="loading">No jobs found. Scrape to get started!</div>';
+                return;
+            }
+
+            el.innerHTML = '';
+            data.jobs.slice(0, 10).forEach(job => {
+                const div = document.createElement('div');
+                div.className = 'job';
+                div.innerHTML = `
+          <h3>${job.title}</h3>
+          <div class="meta">${job.platform} • ${job.job_type} • ${job.budget}</div>
+          <div class="actions">
+            <button onclick="genProposal(${job.id})">📝 Proposal</button>
+            <button onclick="applyJob(${job.id})">✅ Apply</button>
+          </div>
+        `;
+                el.appendChild(div);
+            });
+        }
+
+        async function loadStats() {
+            const data = await api('/api/stats');
+            if (data.stats) {
+                document.getElementById('totalEarnings').textContent = '$' + (data.stats.totalEarnings || 0);
+                document.getElementById('activeJobs').textContent = data.stats.activeJobs || 0;
+                document.getElementById('completedJobs').textContent = data.stats.completedJobs || 0;
+                document.getElementById('successRate').textContent = (data.stats.successRate || 0) + '%';
+            }
+        }
+
+        async function scrapeJobs() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Scraping...';
+            const data = await api('/api/scrape', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keywords: ['web development', 'python', 'react'] })
+            });
+            alert(data.message || data.error || 'Scrape complete');
+            btn.disabled = false;
+            btn.textContent = '🔍 Scrape Jobs';
+            loadJobs();
+        }
+
+        async function refreshJobs() {
+            loadJobs();
+            loadStats();
+        }
+
+        async function genProposal(jobId) {
+            const data = await api('/api/generate-proposal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ job_id: jobId })
+            });
+            alert(data.proposal || data.error || 'Generated');
+        }
+
+        async function applyJob(jobId) {
+            const data = await api('/api/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ job_id: jobId })
+            });
+            alert(data.message || data.error || 'Applied');
+            loadJobs();
+        }
+
+        async function generateDirect() {
+            const title = document.getElementById('d_title').value;
+            const desc = document.getElementById('d_desc').value;
+            const budget = document.getElementById('d_budget').value;
+
+            if (!title || !desc) {
+                alert('Please fill in title and description');
+                return;
+            }
+
+            const data = await api('/api/generate-proposal-direct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ job_title: title, job_description: desc, job_budget: budget })
+            });
+
+            document.getElementById('d_result').textContent = data.proposal || data.error || 'No response';
+        }
+
+        // Load on page load
+        loadJobs();
+        loadStats();
+    </script>
+</body>
+
+</html>

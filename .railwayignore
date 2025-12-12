@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+*.db
+.DS_Store
+.git
+.gitignore
+.vscode
+duplicates_backup/
+duplicates.json
+duplicates_report.txt
