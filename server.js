@@ -9,6 +9,18 @@ const sqlite3 = require('sqlite3').verbose();
 const { OpenAI } = require('openai');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_KEY_HERE');
 
+// Runtime configuration via env (with sane defaults)
+const PORT = process.env.PORT || 5000;
+const SCRAPE_INTERVAL_MINUTES = Number(process.env.SCRAPE_INTERVAL || 30);
+const AUTO_APPLY_ENABLED = process.env.AUTO_APPLY === 'true';
+const DEFAULT_MIN_BUDGET = Number(process.env.DEFAULT_MIN_BUDGET || 100);
+const DEFAULT_MAX_BUDGET = Number(process.env.DEFAULT_MAX_BUDGET || 5000);
+const DEFAULT_MIN_CONFIDENCE = Number(process.env.DEFAULT_MIN_CONFIDENCE || 85);
+const DEFAULT_KEYWORDS = (process.env.DEFAULT_KEYWORDS || 'web development,python script,react,nodejs,data entry,automation')
+  .split(',')
+  .map(k => k.trim())
+  .filter(Boolean);
+
 const app = express();
 const parser = new Parser();
 
@@ -121,6 +133,38 @@ async function scrapeUpworkRSS(keyword = 'web development') {
     console.error('Upwork scraping error:', error.message);
     return [];
   }
+}
+
+// Insert jobs into database (ignore duplicates)
+function insertJobs(jobs) {
+  return new Promise((resolve) => {
+    let inserted = 0;
+
+    jobs.forEach((job) => {
+      db.run(`
+        INSERT OR IGNORE INTO jobs 
+        (external_id, title, description, budget, platform, job_type, difficulty, url, posted_date, ai_confidence, estimated_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        job.external_id,
+        job.title,
+        job.description,
+        job.budget,
+        job.platform,
+        job.job_type,
+        job.difficulty,
+        job.url,
+        job.posted_date,
+        job.ai_confidence,
+        job.estimated_time || '2-4 hours'
+      ], function (err) {
+        if (!err && this.changes > 0) inserted++;
+      });
+    });
+
+    // small delay to allow inserts to finish
+    setTimeout(() => resolve(inserted), 300);
+  });
 }
 
 // Categorize job type
@@ -292,7 +336,7 @@ app.get('/api/jobs', (req, res) => {
 app.post('/api/scrape', async (req, res) => {
   try {
     const { keywords } = req.body;
-    const searchTerms = keywords || ['web development', 'python script', 'data entry'];
+    const searchTerms = keywords || DEFAULT_KEYWORDS;
 
     let allJobs = [];
 
@@ -301,38 +345,14 @@ app.post('/api/scrape', async (req, res) => {
       allJobs = allJobs.concat(jobs);
     }
 
-    // Insert jobs into database (ignore duplicates)
-    let inserted = 0;
-    for (const job of allJobs) {
-      db.run(`
-        INSERT OR IGNORE INTO jobs 
-        (external_id, title, description, budget, platform, job_type, difficulty, url, posted_date, ai_confidence, estimated_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        job.external_id,
-        job.title,
-        job.description,
-        job.budget,
-        job.platform,
-        job.job_type,
-        job.difficulty,
-        job.url,
-        job.posted_date,
-        job.ai_confidence,
-        job.estimated_time || '2-4 hours'
-      ], function (err) {
-        if (!err && this.changes > 0) inserted++;
-      });
-    }
+    const inserted = await insertJobs(allJobs);
 
-    setTimeout(() => {
-      res.json({
-        success: true,
-        scraped: allJobs.length,
-        inserted: inserted,
-        message: `Found ${allJobs.length} jobs, added ${inserted} new ones`
-      });
-    }, 1000);
+    res.json({
+      success: true,
+      scraped: allJobs.length,
+      inserted: inserted,
+      message: `Found ${allJobs.length} jobs, added ${inserted} new ones`
+    });
 
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -419,26 +439,6 @@ app.get('/api/applications', (req, res) => {
 });
 
 // Get statistics
-// Direct proposal generation (no job_id needed)
-app.post('/api/generate-proposal-direct', async (req, res) => {
-  try {
-    const { job_title, job_description, job_budget } = req.body;
-
-    if (!job_title || !job_description) {
-      return res.status(400).json({ error: 'job_title and job_description required' });
-    }
-
-    const proposal = await generateProposal(job_title, job_description, job_budget || 'Not specified');
-
-    res.json({
-      success: true,
-      proposal: proposal,
-      job_title: job_title
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 // Direct proposal generation (no job_id needed)
 app.post('/api/generate-proposal-direct', async (req, res) => {
   try {
@@ -548,20 +548,61 @@ app.put('/api/settings', (req, res) => {
 
 // Auto-scrape jobs every 30 minutes (if running)
 let autoScrapeInterval;
-function startAutoScrape() {
-  autoScrapeInterval = setInterval(async () => {
-    console.log('🔍 Auto-scraping jobs...');
-    const keywords = ['web development', 'python script', 'react', 'data entry', 'nodejs'];
+let autoApplyInterval;
 
-    for (const keyword of keywords) {
-      const jobs = await scrapeUpworkRSS(keyword);
-      console.log(`Found ${jobs.length} jobs for "${keyword}"`);
+async function runAutoScrape() {
+  console.log('🔍 Auto-scraping jobs...');
+  let all = [];
+  for (const keyword of DEFAULT_KEYWORDS) {
+    const jobs = await scrapeUpworkRSS(keyword);
+    all = all.concat(jobs);
+  }
+  const inserted = await insertJobs(all);
+  console.log(`✅ Auto-scrape: ${all.length} found, ${inserted} inserted`);
+}
+
+function startAutoScrape() {
+  const intervalMs = SCRAPE_INTERVAL_MINUTES * 60 * 1000;
+  autoScrapeInterval = setInterval(runAutoScrape, intervalMs);
+}
+
+async function runAutoApply() {
+  if (!AUTO_APPLY_ENABLED) return;
+
+  db.all(`
+    SELECT * FROM jobs
+    WHERE status = 'available'
+      AND ai_confidence >= ?
+  `, [DEFAULT_MIN_CONFIDENCE], async (err, rows) => {
+    if (err || !rows || rows.length === 0) return;
+
+    for (const job of rows.slice(0, 3)) { // apply to a few at a time
+      // Budget filter (basic numeric parse)
+      const budgetValue = parseInt(String(job.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      if (budgetValue < DEFAULT_MIN_BUDGET || budgetValue > DEFAULT_MAX_BUDGET) continue;
+
+      const proposal = await generateProposal(job.title, job.description, job.budget);
+
+      db.run(`
+        INSERT INTO applications (job_id, proposal, status, earnings)
+        VALUES (?, ?, 'pending', ?)
+      `, [job.id, proposal, job.budget], function (applyErr) {
+        if (!applyErr) {
+          db.run('UPDATE jobs SET status = ? WHERE id = ?', ['applied', job.id]);
+          console.log(`✅ Auto-applied to: ${job.title}`);
+        }
+      });
     }
-  }, 30 * 60 * 1000); // 30 minutes
+  });
+}
+
+function startAutoApply() {
+  // Run auto-apply every scrape interval for simplicity
+  const intervalMs = SCRAPE_INTERVAL_MINUTES * 60 * 1000;
+  autoApplyInterval = setInterval(runAutoApply, intervalMs);
 }
 
 // Start server
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`
   🚀 AI FREELANCE BACKEND RUNNING!
@@ -583,6 +624,10 @@ app.listen(PORT, () => {
 
   // Start auto-scraping after 1 minute
   setTimeout(startAutoScrape, 60000);
+  if (AUTO_APPLY_ENABLED) {
+    setTimeout(startAutoApply, 60000);
+    console.log('🤖 Auto-apply is enabled via AUTO_APPLY=true');
+  }
 });
 
 // ============================================
