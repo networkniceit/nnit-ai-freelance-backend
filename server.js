@@ -135,6 +135,39 @@ async function scrapeUpworkRSS(keyword = 'web development') {
   }
 }
 
+// Scrape Indeed RSS Feed
+async function scrapeIndeedRSS(keyword = 'web development', location = '') {
+  try {
+    const q = encodeURIComponent(keyword);
+    const loc = encodeURIComponent(location || '');
+    const rssUrl = `https://www.rss.indeed.com/rss?q=${q}&l=${loc}`;
+    const feed = await parser.parseURL(rssUrl);
+
+    const jobs = feed.items.map(item => {
+      const budgetMatch = item.contentSnippet?.match(/\$[\d,]+/);
+      const budget = budgetMatch ? budgetMatch[0] : 'Not specified';
+
+      return {
+        external_id: item.guid || item.link,
+        title: item.title,
+        description: item.contentSnippet || item.content,
+        budget: budget,
+        platform: 'Indeed',
+        url: item.link,
+        posted_date: new Date(item.pubDate || Date.now()).toISOString(),
+        job_type: categorizeJob(item.title, item.contentSnippet),
+        difficulty: estimateDifficulty(item.contentSnippet),
+        ai_confidence: calculateAIConfidence(item.title, item.contentSnippet)
+      };
+    });
+
+    return jobs;
+  } catch (error) {
+    console.error('Indeed scraping error:', error.message);
+    return [];
+  }
+}
+
 // Insert jobs into database (ignore duplicates)
 function insertJobs(jobs) {
   return new Promise((resolve) => {
@@ -340,8 +373,20 @@ app.post('/api/scrape', async (req, res) => {
 
     let allJobs = [];
 
+    // support querying Indeed as an alternative source
+    const { source = 'upwork', location = '' } = req.body;
+
     for (const keyword of searchTerms) {
-      const jobs = await scrapeUpworkRSS(keyword);
+      let jobs = [];
+      if (source === 'indeed') {
+        jobs = await scrapeIndeedRSS(keyword, location);
+      } else if (source === 'both') {
+        const up = await scrapeUpworkRSS(keyword);
+        const indd = await scrapeIndeedRSS(keyword, location);
+        jobs = up.concat(indd);
+      } else {
+        jobs = await scrapeUpworkRSS(keyword);
+      }
       allJobs = allJobs.concat(jobs);
     }
 
