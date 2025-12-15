@@ -8,7 +8,7 @@ const Parser = require('rss-parser');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { OpenAI } = require('openai');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_51SXBgbCLNKBevI0Id9CDVKxLwUlaG1pJqjw34yL6dnIzqQ3zIcinMnU6HroSBqBclGzSyLT2nbAddQN38l1j7JyF00MBHW3vqt);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Runtime configuration via env (with sane defaults)
 const PORT = process.env.PORT || 5000;
@@ -32,8 +32,12 @@ app.use(express.static('public'));
 
 // OpenAI Setup (You'll need to add your API key)
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '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'
+  apiKey: process.env.OPENAI_API_KEY
 });
+
+// Warn when API keys are not set (do not log actual secrets)
+if (!process.env.STRIPE_SECRET_KEY) console.warn('Warning: STRIPE_SECRET_KEY not set — Stripe payments disabled or will error if used.');
+if (!process.env.OPENAI_API_KEY) console.warn('Warning: OPENAI_API_KEY not set — AI proposal generation will use fallback templates.');
 
 // Database Setup
 const db = new sqlite3.Database('./freelance.db', (err) => {
