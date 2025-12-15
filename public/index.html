@@ -235,7 +235,14 @@
                 <div class="company">Network Nice IT Tec</div>
             </div>
             <div class="controls">
-                <button onclick="scrapeJobs()">🔍 Scrape Jobs</button>
+                <select id="sourceSelect" style="padding:10px;border-radius:6px;border:1px solid #ddd">
+                    <option value="upwork">Upwork</option>
+                    <option value="indeed">Indeed</option>
+                    <option value="both">Both</option>
+                </select>
+                <input id="sourceLocation" placeholder="location (optional)"
+                    style="padding:10px;border-radius:6px;border:1px solid #ddd" />
+                <button onclick="scrapeJobs(event)">🔍 Scrape Jobs</button>
                 <button class="secondary" onclick="refreshJobs()">↻ Refresh</button>
                 <button class="secondary" onclick="window.location.href='/checkout.html'">💳 Checkout</button>
             </div>
@@ -336,10 +343,12 @@
             const btn = event.target;
             btn.disabled = true;
             btn.textContent = 'Scraping...';
+            const source = document.getElementById('sourceSelect')?.value || 'upwork';
+            const location = document.getElementById('sourceLocation')?.value || '';
             const data = await api('/api/scrape', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keywords: ['web development', 'python', 'react'] })
+                body: JSON.stringify({ keywords: ['web development', 'python', 'react'], source: source, location: location })
             });
             alert(data.message || data.error || 'Scrape complete');
             btn.disabled = false;
