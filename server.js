@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const Parser = require('rss-parser');
+const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { OpenAI } = require('openai');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_KEY_HERE');
@@ -735,6 +736,17 @@ app.get('/cancel', (req, res) => {
 });
 
 // Catch 404 - must be at END
+// Serve frontend for non-API routes (SPA fallback)
+app.get('*', (req, res, next) => {
+  // Let API routes pass through
+  if (req.path.startsWith('/api')) return next();
+  // Serve index.html for all other GET requests
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    if (err) return next(err);
+  });
+});
+
+// Catch 404 for anything not handled
 app.use((req, res) => {
   res.status(404).send('404 - Page not found');
 });
