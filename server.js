@@ -600,7 +600,25 @@ async function runAutoScrape() {
   console.log('🔍 Auto-scraping jobs...');
   let all = [];
   for (const keyword of DEFAULT_KEYWORDS) {
-    const jobs = await scrapeUpworkRSS(keyword);
+    // Try Upwork first; if it returns no jobs (e.g., RSS gone / 410), fallback to Indeed
+    let jobs = [];
+    try {
+      jobs = await scrapeUpworkRSS(keyword);
+    } catch (e) {
+      console.log(`Upwork scraping threw an error for "${keyword}": ${e.message}`);
+      jobs = [];
+    }
+
+    if (!jobs || jobs.length === 0) {
+      console.log(`Upwork returned 0 jobs for "${keyword}", trying Indeed fallback`);
+      try {
+        const indeedJobs = await scrapeIndeedRSS(keyword);
+        if (indeedJobs && indeedJobs.length) jobs = jobs.concat(indeedJobs);
+      } catch (ieErr) {
+        console.log(`Indeed fallback failed for "${keyword}": ${ieErr.message}`);
+      }
+    }
+
     all = all.concat(jobs);
   }
   const inserted = await insertJobs(all);
