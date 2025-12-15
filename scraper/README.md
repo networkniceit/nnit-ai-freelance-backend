@@ -17,6 +17,19 @@ Run locally
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Deploy to Railway
+
+1. Create a new Railway service in your project and set the repository root to the `scraper/` folder (or create a new service and deploy from this folder).
+2. Railway will detect the `requirements.txt`. Set the start command to:
+
+```
+uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+Or use the included `Procfile` / `start.sh`.
+
+Notes: ensure any secrets (if later required) are added to the Railway service variables. The scraper is optional and can run as a separate service.
+
 Endpoints
 
 - GET /jobs/indeed?q=web+developer&location=remote
