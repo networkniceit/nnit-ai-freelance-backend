@@ -780,3 +780,46 @@ process.on('SIGINT', () => {
   db.close();
   process.exit(0);
 });
+
+// Stripe webhook endpoint (signature verification)
+// Use express.raw for this route so the raw body is available for signature verification
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
+
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['stripe-signature'];
+
+  if (!stripeWebhookSecret) {
+    console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
+    return res.status(400).send('Webhook secret not configured');
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+  } catch (err) {
+    console.warn('⚠️ Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event types you care about
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      console.log('🔔 checkout.session.completed', session.id);
+      // TODO: fulfill the purchase, mark application as paid, etc.
+      break;
+    }
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object;
+      console.log('🔔 invoice.payment_succeeded', invoice.id);
+      break;
+    }
+    // Add more event types as needed
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  // Return a response to acknowledge receipt of the event
+  res.json({ received: true });
+});
