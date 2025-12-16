@@ -998,6 +998,42 @@ app.get('/cancel', (req, res) => {
   `);
 });
 
+// Test checkout endpoint: create a small test session and redirect
+app.get('/api/test-checkout', async (req, res) => {
+  if (!stripe) {
+    return res.status(503).send('Stripe is not configured');
+  }
+  try {
+    const amount = parseInt(String(req.query.amount || '500'), 10); // cents
+    const name = String(req.query.name || 'Test Item');
+    const application_id = req.query.application_id ? String(req.query.application_id) : null;
+    const base = getBaseUrl(req);
+
+    const payload = {
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: { name },
+            unit_amount: amount,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${base}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/cancel`,
+    };
+    if (application_id) payload.metadata = { application_id };
+
+    const session = await stripe.checkout.sessions.create(payload);
+    return res.redirect(session.url);
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+});
+
 // Serve frontend for non-API routes (SPA fallback)
 // Use a route regex to exclude /api and /webhook without needing an inline if-statement
 app.get(/^\/(?!api|webhook).*/, (req, res, next) => {
