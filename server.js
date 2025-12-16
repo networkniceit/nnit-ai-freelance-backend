@@ -1,5 +1,6 @@
 // AI FREELANCE AUTOMATION BACKEND
 // server.js - Main Express Server
+// Handles job scraping, AI proposals, auto-apply, and Stripe payments
 
 require('dotenv').config();
 
@@ -910,63 +911,63 @@ app.listen(PORT, () => {
   if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
 
   app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-      if (!stripe) {
-        return res.status(503).json({ error: 'Stripe is not configured' });
-      }
+    if (!stripe) {
+      return res.status(503).json({ error: 'Stripe is not configured' });
+    }
 
-      const sig = req.headers['stripe-signature'];
+    const sig = req.headers['stripe-signature'];
 
-      if (!stripeWebhookSecret) {
-        console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
-        return res.status(400).send('Webhook secret not configured');
-      }
+    if (!stripeWebhookSecret) {
+      console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
+      return res.status(400).send('Webhook secret not configured');
+    }
 
-      let event;
-      try {
-        event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
-      } catch (err) {
-        console.warn('⚠️ Webhook signature verification failed:', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-      }
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+    } catch (err) {
+      console.warn('⚠️ Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 
-      // Handle the event types you care about
-      switch (event.type) {
-        case 'checkout.session.completed': {
-          const session = event.data.object;
-          console.log('🔔 checkout.session.completed', session.id);
+    // Handle the event types you care about
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        console.log('🔔 checkout.session.completed', session.id);
 
-          // Mark application as paid and update earnings
-          const metadata = session.metadata || {};
-          if (metadata.application_id) {
-            db.run(`
+        // Mark application as paid and update earnings
+        const metadata = session.metadata || {};
+        if (metadata.application_id) {
+          db.run(`
           UPDATE applications 
           SET status = 'paid', earnings = ?
           WHERE id = ?
         `, [session.amount_total / 100, metadata.application_id], (err) => {
-              if (!err) {
-                console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
-              }
-            });
-          }
-          break;
+            if (!err) {
+              console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
+            }
+          });
         }
-        case 'invoice.payment_succeeded': {
-          const invoice = event.data.object;
-          console.log('🔔 invoice.payment_succeeded', invoice.id);
-          break;
-        }
-        case 'payment_intent.succeeded': {
-          const paymentIntent = event.data.object;
-          console.log('💵 Payment received:', paymentIntent.amount / 100);
-          break;
-        }
-        default:
-          console.log(`Unhandled event type ${event.type}`);
+        break;
       }
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        console.log('🔔 invoice.payment_succeeded', invoice.id);
+        break;
+      }
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object;
+        console.log('💵 Payment received:', paymentIntent.amount / 100);
+        break;
+      }
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
 
-      // Return a response to acknowledge receipt of the event
-      res.json({ received: true });
-    });
+    // Return a response to acknowledge receipt of the event
+    res.json({ received: true });
+  });
 
   // Graceful shutdown
   process.on('SIGINT', () => {
