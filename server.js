@@ -12,6 +12,14 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { OpenAI } = require('openai');
 
+// Global safety nets to prevent unexpected crashes in production
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err && err.stack ? err.stack : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
 // Initialize Stripe only if API key is provided
 let stripe = null;
 if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'your_stripe_key_here') {
