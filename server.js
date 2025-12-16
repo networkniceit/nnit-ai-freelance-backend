@@ -715,76 +715,81 @@ async function runAutoScrape() {
   // Trigger auto-apply immediately after scraping if enabled
   if (AUTO_APPLY_ENABLED && inserted > 0) {
     console.log(`🎯 Triggering auto-apply for ${inserted} new jobs...`);
-    const intervalMs = SCRAPE_INTERVAL_MINUTES * 60 * 1000;
-    autoScrapeInterval = setInterval(runAutoScrape, intervalMs);
+    await runAutoApply();
+  }
+}
+
+async function runAutoApply() {
+  if (!AUTO_APPLY_ENABLED) {
+    console.log('⏸️ Auto-apply disabled');
+    return;
   }
 
-  async function runAutoApply() {
-    if (!AUTO_APPLY_ENABLED) {
-      console.log('⏸️ Auto-apply disabled');
-      return;
-    }
+  console.log('🤖 Running auto-apply...');
 
-    console.log('🤖 Running auto-apply...');
-
-    db.all(`
+  db.all(`
     SELECT * FROM jobs
     WHERE status = 'available'
       AND ai_confidence >= ?
     ORDER BY ai_confidence DESC, posted_date DESC
     LIMIT 10
   `, [DEFAULT_MIN_CONFIDENCE], async (err, rows) => {
-      if (err) {
-        console.error('Auto-apply error:', err.message);
-        return;
+    if (err) {
+      console.error('Auto-apply error:', err.message);
+      return;
+    }
+
+    if (!rows || rows.length === 0) {
+      console.log('📭 No jobs available to apply to');
+      return;
+    }
+
+    console.log(`🎯 Found ${rows.length} high-confidence jobs to apply to`);
+    let applied = 0;
+
+    for (const job of rows) {
+      // Budget filter (basic numeric parse)
+      const budgetValue = parseInt(String(job.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      if (budgetValue > 0 && (budgetValue < DEFAULT_MIN_BUDGET || budgetValue > DEFAULT_MAX_BUDGET)) {
+        console.log(`⏭️ Skipping "${job.title}" - budget $${budgetValue} out of range`);
+        continue;
       }
 
-      if (!rows || rows.length === 0) {
-        console.log('📭 No jobs available to apply to');
-        return;
-      }
+      const proposal = await generateProposal(job.title, job.description, job.budget);
 
-      console.log(`🎯 Found ${rows.length} high-confidence jobs to apply to`);
-      let applied = 0;
-
-      for (const job of rows) {
-        // Budget filter (basic numeric parse)
-        const budgetValue = parseInt(String(job.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
-        if (budgetValue > 0 && (budgetValue < DEFAULT_MIN_BUDGET || budgetValue > DEFAULT_MAX_BUDGET)) {
-          console.log(`⏭️ Skipping "${job.title}" - budget $${budgetValue} out of range`);
-          continue;
-        }
-
-        const proposal = await generateProposal(job.title, job.description, job.budget);
-
-        db.run(`
+      db.run(`
         INSERT INTO applications (job_id, proposal, status, earnings)
         VALUES (?, ?, 'pending', ?)
       `, [job.id, proposal, job.budget], function (applyErr) {
-          if (!applyErr) {
-            db.run('UPDATE jobs SET status = ? WHERE id = ?', ['applied', job.id]);
-            applied++;
-            console.log(`✅ Auto-applied to: ${job.title} (Confidence: ${job.ai_confidence}%, Budget: ${job.budget})`);
-          }
-        });
+        if (!applyErr) {
+          db.run('UPDATE jobs SET status = ? WHERE id = ?', ['applied', job.id]);
+          applied++;
+          console.log(`✅ Auto-applied to: ${job.title} (Confidence: ${job.ai_confidence}%, Budget: ${job.budget})`);
+        }
+      });
 
-        // Small delay between applications to avoid spam
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      // Small delay between applications to avoid spam
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
 
-      console.log(`💼 Auto-apply complete: ${applied} applications submitted`);
-    });
-  }
+    console.log(`💼 Auto-apply complete: ${applied} applications submitted`);
+  });
+}
 
-  function startAutoApply() {
-    // Run auto-apply every scrape interval for simplicity
-    const intervalMs = SCRAPE_INTERVAL_MINUTES * 60 * 1000;
-    autoApplyInterval = setInterval(runAutoApply, intervalMs);
-  }
+function startAutoScrape() {
+  const intervalMs = SCRAPE_INTERVAL_MINUTES * 60 * 1000;
+  autoScrapeInterval = setInterval(runAutoScrape, intervalMs);
+}
 
-  // Start server
-  app.listen(PORT, () => {
-    console.log(`
+function startAutoApply() {
+  // Run auto-apply every scrape interval for simplicity
+  const intervalMs = SCRAPE_INTERVAL_MINUTES * 60 * 1000;
+  autoApplyInterval = setInterval(runAutoApply, intervalMs);
+}
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`
   🚀 AI FREELANCE BACKEND RUNNING!
   
   📡 Server: http://localhost:${PORT}
@@ -806,88 +811,88 @@ async function runAutoScrape() {
   🎲 Min confidence: ${DEFAULT_MIN_CONFIDENCE}%
   `);
 
-    // Run initial scrape quickly, then start interval
-    setTimeout(() => {
-      runAutoScrape().then(() => {
-        console.log('⏰ Setting up recurring auto-scraper...');
-        startAutoScrape();
-        if (AUTO_APPLY_ENABLED) {
-          startAutoApply();
-        }
-      });
-    }, 10000);
-  });
+  // Run initial scrape quickly, then start interval
+  setTimeout(() => {
+    runAutoScrape().then(() => {
+      console.log('⏰ Setting up recurring auto-scraper...');
+      startAutoScrape();
+    });
 
-  // ============================================
-  // STRIPE PAYMENT ENDPOINTS
-  // ============================================
+    // ============================================
+    // STRIPE PAYMENT ENDPOINTS
+    // ============================================
 
-  // Create checkout session (one-time payment)
-  app.post('/api/create-checkout-session', async (req, res) => {
-    if (!stripe) {
-      return res.status(503).json({ error: 'Stripe is not configured' });
-    }
-    try {
-      const { line_items } = req.body;
+    // Create checkout session (one-time payment)
+    // ============================================
+    // STRIPE PAYMENT ENDPOINTS
+    // ============================================
 
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: line_items,
-        mode: 'payment', // ONE-TIME PAYMENT
-        success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
-      });
+    // Create checkout session (one-time payment)
+    app.post('/api/create-checkout-session', async (req, res) => {
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe is not configured' });
+      }
+      try {
+        const { line_items } = req.body;
 
-      res.json({ url: session.url, sessionId: session.id });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: line_items,
+          mode: 'payment', // ONE-TIME PAYMENT
+          success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
+        });
 
-  // Create subscription session
-  app.post('/api/create-subscription-session', async (req, res) => {
-    if (!stripe) {
-      return res.status(503).json({ error: 'Stripe is not configured' });
-    }
-    try {
-      const { line_items } = req.body;
+        res.json({ url: session.url, sessionId: session.id });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
 
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: line_items,
-        mode: 'subscription', // RECURRING PAYMENT
-        success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
-      });
+    // Create subscription session
+    app.post('/api/create-subscription-session', async (req, res) => {
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe is not configured' });
+      }
+      try {
+        const { line_items } = req.body;
 
-      res.json({ url: session.url, sessionId: session.id });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: line_items,
+          mode: 'subscription', // RECURRING PAYMENT
+          success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
+        });
 
-  // Success page
-  app.get('/success', (req, res) => {
-    res.send(`
+        res.json({ url: session.url, sessionId: session.id });
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Success page
+    app.get('/success', (req, res) => {
+      res.send(`
     <h1>✅ Payment Successful!</h1>
     <p>Session ID: ${req.query.session_id}</p>
     <a href="/">Back to home</a>
   `);
-  });
+    });
 
-  // Cancel page
-  app.get('/cancel', (req, res) => {
-    res.send(`
+    // Cancel page
+    app.get('/cancel', (req, res) => {
+      res.send(`
     <h1>❌ Payment Cancelled</h1>
     <a href="/">Back to home</a>
   `);
-  });
+    });
 
-  // Catch 404 - must be at END
-  // Serve frontend for non-API routes (SPA fallback)
-  app.get('*', (req, res, next) => {
-    // Let API routes pass through
-    if (req.path.startsWith('/api')) return next();
+    // Stripe webhook endpoint (signature verification)
+    // Use express.raw for this route so the raw body is available for signature verification
+    const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if// Let API routes pass through
+  if (req.path.startsWith('/api')) return next();
     // Serve index.html for all other GET requests
     res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
       if (err) return next(err);
@@ -899,74 +904,75 @@ async function runAutoScrape() {
     res.status(404).send('404 - Page not found');
   });
 
-  // Graceful shutdown
-  process.on('SIGINT', () => {
-    console.log('\n👋 Shutting down...');
-    clearInterval(autoScrapeInterval);
-    db.close();
-    process.exit(0);
-  });
-
   // Stripe webhook endpoint (signature verification)
   // Use express.raw for this route so the raw body is available for signature verification
   const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
 
   app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-    if (!stripe) {
-      return res.status(503).json({ error: 'Stripe is not configured' });
-    }
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe is not configured' });
+      }
 
-    const sig = req.headers['stripe-signature'];
+      const sig = req.headers['stripe-signature'];
 
-    if (!stripeWebhookSecret) {
-      console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
-      return res.status(400).send('Webhook secret not configured');
-    }
+      if (!stripeWebhookSecret) {
+        console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
+        return res.status(400).send('Webhook secret not configured');
+      }
 
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
-    } catch (err) {
-      console.warn('⚠️ Webhook signature verification failed:', err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
+      let event;
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+      } catch (err) {
+        console.warn('⚠️ Webhook signature verification failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
 
-    // Handle the event types you care about
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        console.log('🔔 checkout.session.completed', session.id);
+      // Handle the event types you care about
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object;
+          console.log('🔔 checkout.session.completed', session.id);
 
-        // Mark application as paid and update earnings
-        const metadata = session.metadata || {};
-        if (metadata.application_id) {
-          db.run(`
+          // Mark application as paid and update earnings
+          const metadata = session.metadata || {};
+          if (metadata.application_id) {
+            db.run(`
           UPDATE applications 
           SET status = 'paid', earnings = ?
           WHERE id = ?
         `, [session.amount_total / 100, metadata.application_id], (err) => {
-            if (!err) {
-              console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
-            }
-          });
+              if (!err) {
+                console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
+              }
+            });
+          }
+          break;
         }
-        break;
+        case 'invoice.payment_succeeded': {
+          const invoice = event.data.object;
+          console.log('🔔 invoice.payment_succeeded', invoice.id);
+          break;
+        }
+        case 'payment_intent.succeeded': {
+          const paymentIntent = event.data.object;
+          console.log('💵 Payment received:', paymentIntent.amount / 100);
+          break;
+        }
+        default:
+          console.log(`Unhandled event type ${event.type}`);
       }
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        console.log('🔔 invoice.payment_succeeded', invoice.id);
-        break;
-      }
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object;
-        console.log('💵 Payment received:', paymentIntent.amount / 100);
-        break;
-      }
-      default:
-        console.log(`Unhandled event type ${event.type}`);
-    }
 
-    // Return a response to acknowledge receipt of the event
-    res.json({ received: true });
+      // Return a response to acknowledge receipt of the event
+      res.json({ received: true });
+    });
+
+  // Graceful shutdown
+  process.on('SIGINT', () => {
+    console.log('\n👋 Shutting down...');
+    clearInterval(autoScrapeInterval);
+    clearInterval(autoApplyInterval);
+    db.close();
+    process.exit(0);
   });
