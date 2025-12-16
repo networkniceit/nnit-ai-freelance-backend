@@ -34,6 +34,7 @@ const DEFAULT_KEYWORDS = (process.env.DEFAULT_KEYWORDS || 'web development,pytho
 
 const app = express();
 const parser = new Parser();
+const VERSION = require('./package.json').version || '0.0.0';
 
 // Middleware
 app.use(cors());
@@ -444,8 +445,15 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'running',
     message: '🤖 AI Freelance Backend is active!',
+    version: VERSION,
+    port: PORT,
     timestamp: new Date().toISOString()
   });
+});
+
+// Version check (quick sanity endpoint)
+app.get('/api/version', (req, res) => {
+  res.json({ version: VERSION, uptime: process.uptime() });
 });
 
 // Get all jobs
