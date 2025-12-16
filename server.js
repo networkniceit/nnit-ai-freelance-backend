@@ -49,6 +49,7 @@ const DEFAULT_KEYWORDS = (process.env.DEFAULT_KEYWORDS || 'web development,pytho
 const app = express();
 const parser = new Parser();
 const VERSION = require('./package.json').version || '0.0.0';
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
 
 // Middleware
 app.use(cors());
@@ -109,6 +110,14 @@ if (stripeWebhookSecret && stripe) {
 
 // JSON body parser should come after webhook raw parser
 app.use(express.json());
+
+// Helper to compute base URL for redirects (Stripe success/cancel)
+function getBaseUrl(req) {
+  if (PUBLIC_BASE_URL) return PUBLIC_BASE_URL.replace(/\/$/, '');
+  const proto = (req.headers['x-forwarded-proto'] || 'http').split(',')[0];
+  const host = req.headers.host || `localhost:${PORT}`;
+  return `${proto}://${host}`;
+}
 
 // OpenAI Setup (safe if API key missing)
 let openai = null;
@@ -933,13 +942,14 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
   try {
     const { line_items } = req.body;
+    const base = getBaseUrl(req);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: line_items,
       mode: 'payment', // ONE-TIME PAYMENT
-      success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
+      success_url: `${base}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/cancel`,
     });
 
     res.json({ url: session.url, sessionId: session.id });
@@ -955,13 +965,14 @@ app.post('/api/create-subscription-session', async (req, res) => {
   }
   try {
     const { line_items } = req.body;
+    const base = getBaseUrl(req);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: line_items,
       mode: 'subscription', // RECURRING PAYMENT
-      success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
+      success_url: `${base}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/cancel`,
     });
 
     res.json({ url: session.url, sessionId: session.id });
