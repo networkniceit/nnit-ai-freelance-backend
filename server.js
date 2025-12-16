@@ -24,6 +24,12 @@ if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'your_str
 const PORT = process.env.PORT || 5000;
 const SCRAPE_INTERVAL_MINUTES = Number(process.env.SCRAPE_INTERVAL || 30);
 const AUTO_APPLY_ENABLED = process.env.AUTO_APPLY === 'true';
+// Auto-scrape toggle: default disabled on Railway to reduce noise unless explicitly enabled
+const AUTO_SCRAPE_ENABLED = (() => {
+  if (process.env.AUTO_SCRAPE === 'true') return true;
+  if (process.env.AUTO_SCRAPE === 'false') return false;
+  return process.env.RAILWAY_ENVIRONMENT ? false : true;
+})();
 const DEFAULT_MIN_BUDGET = Number(process.env.DEFAULT_MIN_BUDGET || 100);
 const DEFAULT_MAX_BUDGET = Number(process.env.DEFAULT_MAX_BUDGET || 5000);
 const DEFAULT_MIN_CONFIDENCE = Number(process.env.DEFAULT_MIN_CONFIDENCE || 85);
@@ -872,25 +878,28 @@ app.listen(PORT, () => {
      GET  /api/settings - Get settings
      PUT  /api/settings - Update settings
   
-  💡 Starting initial job scrape in 10 seconds...
   🤖 Auto-apply: ${AUTO_APPLY_ENABLED ? 'ENABLED ✅' : 'DISABLED ⏸️'}
+  🕷️ Auto-scrape: ${AUTO_SCRAPE_ENABLED ? 'ENABLED ✅' : 'DISABLED ⏸️'}
   🎯 Scrape interval: ${SCRAPE_INTERVAL_MINUTES} minutes
   💰 Budget range: $${DEFAULT_MIN_BUDGET} - $${DEFAULT_MAX_BUDGET}
   🎲 Min confidence: ${DEFAULT_MIN_CONFIDENCE}%
   `);
 
-  // Run initial scrape quickly, then start interval
-  setTimeout(() => {
-    runAutoScrape().then(() => {
-      console.log('⏰ Setting up recurring auto-scraper...');
-      startAutoScrape();
-      if (AUTO_APPLY_ENABLED) {
-        startAutoApply();
-      }
-    }).catch(err => {
-      console.error('❌ Auto-scrape failed:', err.message);
-    });
-  }, 10000);
+  // Start scheduled tasks
+  if (AUTO_SCRAPE_ENABLED) {
+    // Run initial scrape quickly, then start interval
+    setTimeout(() => {
+      runAutoScrape().then(() => {
+        console.log('⏰ Setting up recurring auto-scraper...');
+        startAutoScrape();
+        if (AUTO_APPLY_ENABLED) startAutoApply();
+      }).catch(err => {
+        console.error('❌ Auto-scrape failed:', err.message);
+      });
+    }, 10000);
+  } else {
+    if (AUTO_APPLY_ENABLED) startAutoApply();
+  }
 });
 
 // ============================================
