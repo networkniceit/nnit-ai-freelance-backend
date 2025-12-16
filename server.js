@@ -700,50 +700,61 @@ app.post('/api/generate-proposal-direct', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// Apply to a job
-app.get('/api/stats', (req, res) => {
-  const stats = {};
-
-  // Total earnings
-  db.get(`
-    SELECT SUM(CAST(REPLACE(REPLACE(earnings, '$', ''), ',', '') AS INTEGER)) as total
-    FROM applications 
-    WHERE status = 'completed'
-  `, [], (err, row) => {
-    stats.totalEarnings = row?.total || 0;
+// Helpers for Promise-based DB queries
+function dbGetAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) return reject(err);
+      resolve(row || {});
+    });
   });
+}
 
-  // Active jobs count
-  db.get(`
-    SELECT COUNT(*) as count
-    FROM applications
-    WHERE status IN ('pending', 'in-progress')
-  `, [], (err, row) => {
-    stats.activeJobs = row?.count || 0;
-  });
+// Lightweight stats endpoint for quick responses
+app.get('/api/stats-lite', async (req, res) => {
+  try {
+    const totalRow = await dbGetAsync(`SELECT COUNT(*) as total FROM applications`, []);
+    const completedRow = await dbGetAsync(`SELECT COUNT(*) as count FROM applications WHERE status = 'completed'`, []);
+    const activeRow = await dbGetAsync(`SELECT COUNT(*) as count FROM applications WHERE status IN ('pending','in-progress')`, []);
+    res.json({
+      stats: {
+        totalApplications: totalRow.total || 0,
+        completedJobs: completedRow.count || 0,
+        activeJobs: activeRow.count || 0,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-  // Completed jobs
-  db.get(`
-    SELECT COUNT(*) as count
-    FROM applications
-    WHERE status = 'completed'
-  `, [], (err, row) => {
-    stats.completedJobs = row?.count || 0;
-  });
+// Full stats with guarded queries and prompt response
+app.get('/api/stats', async (req, res) => {
+  try {
+    const [earningsRes, activeRes, completedRes, successRes] = await Promise.allSettled([
+      dbGetAsync(`SELECT SUM(CAST(REPLACE(REPLACE(earnings, '$', ''), ',', '') AS INTEGER)) as total FROM applications WHERE status = 'completed'`, []),
+      dbGetAsync(`SELECT COUNT(*) as count FROM applications WHERE status IN ('pending','in-progress')`, []),
+      dbGetAsync(`SELECT COUNT(*) as count FROM applications WHERE status = 'completed'`, []),
+      dbGetAsync(`SELECT COUNT(*) as total, SUM(CASE WHEN status IN ('completed','in-progress') THEN 1 ELSE 0 END) as successful FROM applications`, []),
+    ]);
 
-  // Success rate
-  db.get(`
-    SELECT 
-      COUNT(*) as total,
-      SUM(CASE WHEN status IN ('completed', 'in-progress') THEN 1 ELSE 0 END) as successful
-    FROM applications
-  `, [], (err, row) => {
-    stats.successRate = row?.total > 0 ? Math.round((row.successful / row.total) * 100) : 0;
-  });
+    const stats = {
+      totalEarnings: earningsRes.status === 'fulfilled' ? (earningsRes.value.total || 0) : 0,
+      activeJobs: activeRes.status === 'fulfilled' ? (activeRes.value.count || 0) : 0,
+      completedJobs: completedRes.status === 'fulfilled' ? (completedRes.value.count || 0) : 0,
+      successRate: 0,
+    };
 
-  setTimeout(() => {
+    if (successRes.status === 'fulfilled') {
+      const total = successRes.value.total || 0;
+      const successful = successRes.value.successful || 0;
+      stats.successRate = total > 0 ? Math.round((successful / total) * 100) : 0;
+    }
+
     res.json({ stats });
-  }, 500);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get settings
