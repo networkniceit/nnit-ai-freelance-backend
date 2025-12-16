@@ -468,6 +468,16 @@ app.get('/api/ping', (req, res) => {
   res.status(200).send('pong');
 });
 
+// Ready endpoint (simple OK for platform health probes)
+app.get('/ready', (req, res) => {
+  res.status(200).send('ok');
+});
+
+// Root route returns a minimal message (helps verify routing without SPA)
+app.get('/', (req, res) => {
+  res.status(200).send('AI Freelance Backend is running');
+});
+
 // Get all jobs
 app.get('/api/jobs', (req, res) => {
   const { status, platform, job_type, min_confidence } = req.query;
