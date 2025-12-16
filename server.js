@@ -462,6 +462,11 @@ app.get('/api/version', (req, res) => {
   res.json({ version: VERSION, uptime: process.uptime() });
 });
 
+// Ping endpoint for uptime monitors
+app.get('/api/ping', (req, res) => {
+  res.status(200).send('pong');
+});
+
 // Get all jobs
 app.get('/api/jobs', (req, res) => {
   const { status, platform, job_type, min_confidence } = req.query;
