@@ -37,8 +37,70 @@ const parser = new Parser();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
 app.use(express.static('public'));
+
+// Stripe webhook endpoint (must be before express.json)
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
+
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe is not configured' });
+  }
+
+  const sig = req.headers['stripe-signature'];
+
+  if (!stripeWebhookSecret) {
+    console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
+    return res.status(400).send('Webhook secret not configured');
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+  } catch (err) {
+    console.warn('⚠️ Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      console.log('🔔 checkout.session.completed', session.id);
+
+      const metadata = session.metadata || {};
+      if (metadata.application_id) {
+        db.run(`
+          UPDATE applications 
+          SET status = 'paid', earnings = ?
+          WHERE id = ?
+        `, [session.amount_total / 100, metadata.application_id], (err) => {
+          if (!err) {
+            console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
+          }
+        });
+      }
+      break;
+    }
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object;
+      console.log('🔔 invoice.payment_succeeded', invoice.id);
+      break;
+    }
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object;
+      console.log('💵 Payment received:', paymentIntent.amount / 100);
+      break;
+    }
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
+// JSON body parser should come after webhook raw parser
+app.use(express.json());
 
 // OpenAI Setup (safe if API key missing)
 let openai = null;
@@ -893,78 +955,14 @@ app.get('/cancel', (req, res) => {
 });
 
 // Serve frontend for non-API routes (SPA fallback)
-app.get('*', (req, res, next) => {
-  // Let API routes pass through
-  if (req.path.startsWith('/api')) return next();
-  // Serve index.html for all other GET requests
+// Use a route regex to exclude /api and /webhook without needing an inline if-statement
+app.get(/^\/(?!api|webhook).*/, (req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
     if (err) return next(err);
   });
 });
 
-// Stripe webhook endpoint (signature verification)
-// Use express.raw for this route so the raw body is available for signature verification
-const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
-
-app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  if (!stripe) {
-    return res.status(503).json({ error: 'Stripe is not configured' });
-  }
-
-  const sig = req.headers['stripe-signature'];
-
-  if (!stripeWebhookSecret) {
-    console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
-    return res.status(400).send('Webhook secret not configured');
-  }
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
-  } catch (err) {
-    console.warn('⚠️ Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Handle the event types you care about
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object;
-      console.log('🔔 checkout.session.completed', session.id);
-
-      // Mark application as paid and update earnings
-      const metadata = session.metadata || {};
-      if (metadata.application_id) {
-        db.run(`
-          UPDATE applications 
-          SET status = 'paid', earnings = ?
-          WHERE id = ?
-        `, [session.amount_total / 100, metadata.application_id], (err) => {
-          if (!err) {
-            console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
-          }
-        });
-      }
-      break;
-    }
-    case 'invoice.payment_succeeded': {
-      const invoice = event.data.object;
-      console.log('🔔 invoice.payment_succeeded', invoice.id);
-      break;
-    }
-    case 'payment_intent.succeeded': {
-      const paymentIntent = event.data.object;
-      console.log('💵 Payment received:', paymentIntent.amount / 100);
-      break;
-    }
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-
-  // Return a response to acknowledge receipt of the event
-  res.json({ received: true });
-});
+// (Webhook route moved above express.json to preserve raw body)
 
 // Graceful shutdown
 process.on('SIGINT', () => {
