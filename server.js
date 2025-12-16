@@ -693,7 +693,7 @@ async function runAutoScrape() {
       scrapeIndeedRSS(keyword).catch(e => { console.log(`Indeed: ${e.message}`); return []; })
     ]);
     all = all.concat(upworkJobs, indeedJobs);
-    
+
     if (upworkJobs.length > 0 || indeedJobs.length > 0) {
       console.log(`✅ Found ${upworkJobs.length + indeedJobs.length} jobs for "${keyword}"`);
     }
@@ -820,155 +820,149 @@ app.listen(PORT, () => {
 // ============================================
 
 // Create checkout session (one-time payment)
-    // STRIPE PAYMENT ENDPOINTS
-    // ============================================
+// STRIPE PAYMENT ENDPOINTS
+// ============================================
 
-    // Create checkout session (one-time payment)
-    app.post('/api/create-checkout-session', async (req, res) => {
-      if (!stripe) {
-        return res.status(503).json({ error: 'Stripe is not configured' });
-      }
-      try {
-        const { line_items } = req.body;
+// Create checkout session (one-time payment)
+app.post('/api/create-checkout-session', async (req, res) => {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe is not configured' });
+  }
+  try {
+    const { line_items } = req.body;
 
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          line_items: line_items,
-          mode: 'payment', // ONE-TIME PAYMENT
-          success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
-        });
-
-        res.json({ url: session.url, sessionId: session.id });
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: line_items,
+      mode: 'payment', // ONE-TIME PAYMENT
+      success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
     });
 
-    // Create subscription session
-    app.post('/api/create-subscription-session', async (req, res) => {
-      if (!stripe) {
-        return res.status(503).json({ error: 'Stripe is not configured' });
-      }
-      try {
-        const { line_items } = req.body;
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          line_items: line_items,
-          mode: 'subscription', // RECURRING PAYMENT
-          success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
-        });
+// Create subscription session
+app.post('/api/create-subscription-session', async (req, res) => {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe is not configured' });
+  }
+  try {
+    const { line_items } = req.body;
 
-        res.json({ url: session.url, sessionId: session.id });
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: line_items,
+      mode: 'subscription', // RECURRING PAYMENT
+      success_url: `http://localhost:${process.env.PORT || 5000}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `http://localhost:${process.env.PORT || 5000}/cancel`,
     });
 
-    // Success page
-    app.get('/success', (req, res) => {
-      res.send(`
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Success page
+app.get('/success', (req, res) => {
+  res.send(`
     <h1>✅ Payment Successful!</h1>
     <p>Session ID: ${req.query.session_id}</p>
     <a href="/">Back to home</a>
   `);
-    });
+});
 
-    // Cancel page
-    app.get('/cancel', (req, res) => {
-      res.send(`
+// Cancel page
+app.get('/cancel', (req, res) => {
+  res.send(`
     <h1>❌ Payment Cancelled</h1>
     <a href="/">Back to home</a>
   `);
-    });
+});
 
-    // Stripe webhook endpoint (signature verification)
-    // Use express.raw for this route so the raw body is available for signature verification
-    const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if// Let API routes pass through
+// Serve frontend for non-API routes (SPA fallback)
+app.get('*', (req, res, next) => {
+  // Let API routes pass through
   if (req.path.startsWith('/api')) return next();
-    // Serve index.html for all other GET requests
-    res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
-      if (err) return next(err);
-    });
+  // Serve index.html for all other GET requests
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    if (err) return next(err);
   });
+});
 
-  // Catch 404 for anything not handled
-  app.use((req, res) => {
-    res.status(404).send('404 - Page not found');
-  });
+// Stripe webhook endpoint (signature verification)
+// Use express.raw for this route so the raw body is available for signature verification
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
 
-  // Stripe webhook endpoint (signature verification)
-  // Use express.raw for this route so the raw body is available for signature verification
-  const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe is not configured' });
+  }
 
-  app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-    if (!stripe) {
-      return res.status(503).json({ error: 'Stripe is not configured' });
-    }
+  const sig = req.headers['stripe-signature'];
 
-    const sig = req.headers['stripe-signature'];
+  if (!stripeWebhookSecret) {
+    console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
+    return res.status(400).send('Webhook secret not configured');
+  }
 
-    if (!stripeWebhookSecret) {
-      console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
-      return res.status(400).send('Webhook secret not configured');
-    }
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+  } catch (err) {
+    console.warn('⚠️ Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
 
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
-    } catch (err) {
-      console.warn('⚠️ Webhook signature verification failed:', err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
+  // Handle the event types you care about
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      console.log('🔔 checkout.session.completed', session.id);
 
-    // Handle the event types you care about
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        console.log('🔔 checkout.session.completed', session.id);
-
-        // Mark application as paid and update earnings
-        const metadata = session.metadata || {};
-        if (metadata.application_id) {
-          db.run(`
+      // Mark application as paid and update earnings
+      const metadata = session.metadata || {};
+      if (metadata.application_id) {
+        db.run(`
           UPDATE applications 
           SET status = 'paid', earnings = ?
           WHERE id = ?
         `, [session.amount_total / 100, metadata.application_id], (err) => {
-            if (!err) {
-              console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
-            }
-          });
-        }
-        break;
+          if (!err) {
+            console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
+          }
+        });
       }
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object;
-        console.log('🔔 invoice.payment_succeeded', invoice.id);
-        break;
-      }
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object;
-        console.log('💵 Payment received:', paymentIntent.amount / 100);
-        break;
-      }
-      default:
-        console.log(`Unhandled event type ${event.type}`);
+      break;
     }
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object;
+      console.log('🔔 invoice.payment_succeeded', invoice.id);
+      break;
+    }
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object;
+      console.log('💵 Payment received:', paymentIntent.amount / 100);
+      break;
+    }
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
 
-    // Return a response to acknowledge receipt of the event
-    res.json({ received: true });
-  });
+  // Return a response to acknowledge receipt of the event
+  res.json({ received: true });
+});
 
-  // Graceful shutdown
-  process.on('SIGINT', () => {
-    console.log('\n👋 Shutting down...');
-    clearInterval(autoScrapeInterval);
-    clearInterval(autoApplyInterval);
-    db.close();
-    process.exit(0);
-  });
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n👋 Shutting down...');
+  clearInterval(autoScrapeInterval);
+  clearInterval(autoApplyInterval);
+  db.close();
+  process.exit(0);
+});
