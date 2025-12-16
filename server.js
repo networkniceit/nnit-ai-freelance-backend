@@ -49,12 +49,13 @@ const openai = new OpenAI({
 if (!process.env.STRIPE_SECRET_KEY) console.warn('Warning: STRIPE_SECRET_KEY not set — Stripe payments disabled or will error if used.');
 if (!process.env.OPENAI_API_KEY) console.warn('Warning: OPENAI_API_KEY not set — AI proposal generation will use fallback templates.');
 
-// Database Setup
-const db = new sqlite3.Database('./freelance.db', (err) => {
+// Database Setup - use in-memory for Railway (ephemeral filesystem)
+const dbPath = process.env.DATABASE_PATH || (process.env.RAILWAY_ENVIRONMENT ? ':memory:' : './freelance.db');
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('Database error:', err);
+    console.error('❌ Database error:', err);
   } else {
-    console.log('📊 Database connected');
+    console.log(`📊 Database connected (${dbPath})`);
     initDatabase();
   }
 });
@@ -686,27 +687,15 @@ async function runAutoScrape() {
   let all = [];
 
   for (const keyword of DEFAULT_KEYWORDS) {
-    // Try Python service first (most reliable)
-    try {
-      const pythonJobs = await scrapePythonService(keyword);
-      if (pythonJobs && pythonJobs.length > 0) {
-        all = all.concat(pythonJobs);
-        console.log(`✅ Found ${pythonJobs.length} jobs for "${keyword}" from Python scraper`);
-      }
-    } catch (e) {
-      console.log(`Python service error for "${keyword}": ${e.message}`);
-    }
-  }
-
-  // If we got jobs from Python scraper, skip RSS feeds (they're dead)
-  if (all.length === 0) {
-    console.log('⚠️ No jobs from Python scraper, trying RSS fallbacks...');
-    for (const keyword of DEFAULT_KEYWORDS) {
-      const [upworkJobs, indeedJobs] = await Promise.all([
-        scrapeUpworkRSS(keyword).catch(e => []),
-        scrapeIndeedRSS(keyword).catch(e => [])
-      ]);
-      all = all.concat(upworkJobs, indeedJobs);
+    // Try RSS feeds (Python service not available on Railway)
+    const [upworkJobs, indeedJobs] = await Promise.all([
+      scrapeUpworkRSS(keyword).catch(e => { console.log(`Upwork: ${e.message}`); return []; }),
+      scrapeIndeedRSS(keyword).catch(e => { console.log(`Indeed: ${e.message}`); return []; })
+    ]);
+    all = all.concat(upworkJobs, indeedJobs);
+    
+    if (upworkJobs.length > 0 || indeedJobs.length > 0) {
+      console.log(`✅ Found ${upworkJobs.length + indeedJobs.length} jobs for "${keyword}"`);
     }
   }
 
@@ -817,14 +806,20 @@ app.listen(PORT, () => {
     runAutoScrape().then(() => {
       console.log('⏰ Setting up recurring auto-scraper...');
       startAutoScrape();
+      if (AUTO_APPLY_ENABLED) {
+        startAutoApply();
+      }
+    }).catch(err => {
+      console.error('❌ Auto-scrape failed:', err.message);
     });
+  }, 10000);
+});
 
-    // ============================================
-    // STRIPE PAYMENT ENDPOINTS
-    // ============================================
+// ============================================
+// STRIPE PAYMENT ENDPOINTS
+// ============================================
 
-    // Create checkout session (one-time payment)
-    // ============================================
+// Create checkout session (one-time payment)
     // STRIPE PAYMENT ENDPOINTS
     // ============================================
 
