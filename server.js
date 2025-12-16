@@ -40,10 +40,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// OpenAI Setup (You'll need to add your API key)
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// OpenAI Setup (safe if API key missing)
+let openai = null;
+if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
+  try {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  } catch (e) {
+    console.warn('⚠️ Failed to initialize OpenAI client:', e.message);
+    openai = null;
+  }
+} else {
+  console.warn('⚠️ OPENAI_API_KEY not set — using fallback proposal generator.');
+}
 
 // Warn when API keys are not set (do not log actual secrets)
 if (!process.env.STRIPE_SECRET_KEY) console.warn('Warning: STRIPE_SECRET_KEY not set — Stripe payments disabled or will error if used.');
