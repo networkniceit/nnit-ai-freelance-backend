@@ -48,63 +48,56 @@ app.use(express.static('public'));
 
 // Stripe webhook endpoint (must be before express.json)
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-if (!stripeWebhookSecret) console.warn('STRIPE_WEBHOOK_SECRET not set — webhook signature verification will be skipped.');
+if (stripeWebhookSecret && stripe) {
+  app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+    const sig = req.headers['stripe-signature'];
 
-app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  if (!stripe) {
-    return res.status(503).json({ error: 'Stripe is not configured' });
-  }
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+    } catch (err) {
+      console.warn('⚠️ Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 
-  const sig = req.headers['stripe-signature'];
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        console.log('🔔 checkout.session.completed', session.id);
 
-  if (!stripeWebhookSecret) {
-    console.warn('Received webhook but no STRIPE_WEBHOOK_SECRET configured.');
-    return res.status(400).send('Webhook secret not configured');
-  }
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
-  } catch (err) {
-    console.warn('⚠️ Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object;
-      console.log('🔔 checkout.session.completed', session.id);
-
-      const metadata = session.metadata || {};
-      if (metadata.application_id) {
-        db.run(`
-          UPDATE applications 
-          SET status = 'paid', earnings = ?
-          WHERE id = ?
-        `, [session.amount_total / 100, metadata.application_id], (err) => {
-          if (!err) {
-            console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
-          }
-        });
+        const metadata = session.metadata || {};
+        if (metadata.application_id) {
+          db.run(`
+            UPDATE applications 
+            SET status = 'paid', earnings = ?
+            WHERE id = ?
+          `, [session.amount_total / 100, metadata.application_id], (err) => {
+            if (!err) {
+              console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
+            }
+          });
+        }
+        break;
       }
-      break;
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        console.log('🔔 invoice.payment_succeeded', invoice.id);
+        break;
+      }
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object;
+        console.log('💵 Payment received:', paymentIntent.amount / 100);
+        break;
+      }
+      default:
+        console.log(`Unhandled event type ${event.type}`);
     }
-    case 'invoice.payment_succeeded': {
-      const invoice = event.data.object;
-      console.log('🔔 invoice.payment_succeeded', invoice.id);
-      break;
-    }
-    case 'payment_intent.succeeded': {
-      const paymentIntent = event.data.object;
-      console.log('💵 Payment received:', paymentIntent.amount / 100);
-      break;
-    }
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
 
-  res.json({ received: true });
-});
+    res.json({ received: true });
+  });
+} else {
+  console.info('Stripe webhook disabled: STRIPE_WEBHOOK_SECRET missing or Stripe not configured.');
+}
 
 // JSON body parser should come after webhook raw parser
 app.use(express.json());
