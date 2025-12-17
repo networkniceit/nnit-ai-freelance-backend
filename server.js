@@ -89,6 +89,12 @@ const metrics = {
   }
 };
 
+// Runtime automation state (can be toggled via API and settings)
+const state = {
+  autoApply: AUTO_APPLY_ENABLED,
+  autoScrape: AUTO_SCRAPE_ENABLED,
+};
+
 // Middleware
 app.use(cors());
 app.use(express.static('public'));
@@ -182,8 +188,8 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
 if (!process.env.STRIPE_SECRET_KEY) log('error', 'Warning: STRIPE_SECRET_KEY not set — Stripe payments disabled or will error if used.');
 if (!process.env.OPENAI_API_KEY) log('error', 'Warning: OPENAI_API_KEY not set — AI proposal generation will use fallback templates.');
 
-// Database Setup - use in-memory for Railway (ephemeral filesystem)
-const dbPath = process.env.DATABASE_PATH || (process.env.RAILWAY_ENVIRONMENT ? ':memory:' : './freelance.db');
+// Database Setup - prefer persistent path on Railway
+const dbPath = process.env.DATABASE_PATH || (process.env.RAILWAY_ENVIRONMENT ? '/data/app.db' : './freelance.db');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     log('error', 'Database error', { error: err && err.message ? err.message : String(err) });
@@ -231,6 +237,7 @@ function initDatabase() {
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY,
       auto_apply BOOLEAN DEFAULT 0,
+      auto_scrape BOOLEAN DEFAULT 0,
       min_budget INTEGER DEFAULT 100,
       max_budget INTEGER DEFAULT 5000,
       min_confidence INTEGER DEFAULT 85,
@@ -246,6 +253,15 @@ function initDatabase() {
   `);
 
   log('info', 'Database initialized');
+
+  // Load automation flags from settings (prefer settings over env if set)
+  db.get('SELECT auto_apply, auto_scrape FROM settings WHERE id = 1', [], (err, row) => {
+    if (!err && row) {
+      if (row.auto_apply !== null && row.auto_apply !== undefined) state.autoApply = !!row.auto_apply || state.autoApply;
+      if (row.auto_scrape !== null && row.auto_scrape !== undefined) state.autoScrape = !!row.auto_scrape || state.autoScrape;
+      log('info', 'Automation flags loaded', { autoApply: state.autoApply, autoScrape: state.autoScrape });
+    }
+  });
 }
 
 // ============================================
@@ -878,14 +894,15 @@ app.get('/api/settings', (req, res) => {
 
 // Update settings
 app.put('/api/settings', (req, res) => {
-  const { auto_apply, min_budget, max_budget, min_confidence, platforms, job_types } = req.body;
+  const { auto_apply, auto_scrape, min_budget, max_budget, min_confidence, platforms, job_types } = req.body;
 
   db.run(`
     UPDATE settings 
-    SET auto_apply = ?, min_budget = ?, max_budget = ?, min_confidence = ?, platforms = ?, job_types = ?
+    SET auto_apply = ?, auto_scrape = ?, min_budget = ?, max_budget = ?, min_confidence = ?, platforms = ?, job_types = ?
     WHERE id = 1
   `, [
     auto_apply ? 1 : 0,
+    auto_scrape ? 1 : 0,
     min_budget,
     max_budget,
     min_confidence,
@@ -895,6 +912,8 @@ app.put('/api/settings', (req, res) => {
     if (err) {
       res.status(500).json({ error: err.message });
     } else {
+      if (typeof auto_apply === 'boolean') state.autoApply = auto_apply;
+      if (typeof auto_scrape === 'boolean') state.autoScrape = auto_scrape;
       res.json({ success: true, message: 'Settings updated' });
     }
   });
@@ -925,14 +944,14 @@ async function runAutoScrape() {
   log('info', 'Auto-scrape complete', { found: all.length, inserted });
 
   // Trigger auto-apply immediately after scraping if enabled
-  if (AUTO_APPLY_ENABLED && inserted > 0) {
+  if (state.autoApply && inserted > 0) {
     log('info', 'Triggering auto-apply', { newJobs: inserted });
     await runAutoApply();
   }
 }
 
 async function runAutoApply() {
-  if (!AUTO_APPLY_ENABLED) {
+  if (!state.autoApply) {
     log('info', 'Auto-apply disabled');
     return;
   }
@@ -1001,6 +1020,16 @@ function startAutoApply() {
   autoApplyInterval = setInterval(runAutoApply, intervalMs);
 }
 
+function stopAutoScrape() {
+  if (autoScrapeInterval) clearInterval(autoScrapeInterval);
+  autoScrapeInterval = undefined;
+}
+
+function stopAutoApply() {
+  if (autoApplyInterval) clearInterval(autoApplyInterval);
+  autoApplyInterval = undefined;
+}
+
 // Start server
 app.listen(PORT, () => {
   // Single concise startup entry for clean production logs
@@ -1018,8 +1047,8 @@ app.listen(PORT, () => {
       'PUT /api/settings'
     ],
     automation: {
-      autoApply: AUTO_APPLY_ENABLED ? 'ENABLED' : 'DISABLED',
-      autoScrape: AUTO_SCRAPE_ENABLED ? 'ENABLED' : 'DISABLED',
+      autoApply: state.autoApply ? 'ENABLED' : 'DISABLED',
+      autoScrape: state.autoScrape ? 'ENABLED' : 'DISABLED',
       scrapeIntervalMinutes: SCRAPE_INTERVAL_MINUTES,
       budgetRange: `$${DEFAULT_MIN_BUDGET}-$${DEFAULT_MAX_BUDGET}`,
       minConfidencePercent: DEFAULT_MIN_CONFIDENCE
@@ -1027,19 +1056,19 @@ app.listen(PORT, () => {
   });
 
   // Start scheduled tasks
-  if (AUTO_SCRAPE_ENABLED) {
+  if (state.autoScrape) {
     // Run initial scrape quickly, then start interval
     setTimeout(() => {
       runAutoScrape().then(() => {
         log('info', 'Setting up recurring auto-scraper...');
         startAutoScrape();
-        if (AUTO_APPLY_ENABLED) startAutoApply();
+        if (state.autoApply) startAutoApply();
       }).catch(err => {
         log('error', 'Auto-scrape failed', { message: err.message });
       });
     }, 10000);
   } else {
-    if (AUTO_APPLY_ENABLED) startAutoApply();
+    if (state.autoApply) startAutoApply();
   }
 });
 
@@ -1159,39 +1188,75 @@ app.get('/api/test-checkout', async (req, res) => {
   }
 });
 
-  // ============================================
-  // AUTOMATION CONTROL ENDPOINTS (manual triggers and status)
-  // ============================================
+// ============================================
+// AUTOMATION CONTROL ENDPOINTS (manual triggers and status)
+// ============================================
 
-  // Report automation status and effective config
-  app.get('/api/automation-status', (req, res) => {
-    res.json({
-      automation: {
-        autoScrapeEnabled: AUTO_SCRAPE_ENABLED,
-        autoApplyEnabled: AUTO_APPLY_ENABLED,
-        scrapeIntervalMinutes: SCRAPE_INTERVAL_MINUTES,
-        minConfidence: DEFAULT_MIN_CONFIDENCE,
-        budgetRange: { min: DEFAULT_MIN_BUDGET, max: DEFAULT_MAX_BUDGET },
-        defaultKeywords: DEFAULT_KEYWORDS
+// Report automation status and effective config
+app.get('/api/automation-status', (req, res) => {
+  res.json({
+    automation: {
+      autoScrapeEnabled: state.autoScrape,
+      autoApplyEnabled: state.autoApply,
+      scrapeIntervalMinutes: SCRAPE_INTERVAL_MINUTES,
+      minConfidence: DEFAULT_MIN_CONFIDENCE,
+      budgetRange: { min: DEFAULT_MIN_BUDGET, max: DEFAULT_MAX_BUDGET },
+      defaultKeywords: DEFAULT_KEYWORDS
+    }
+  });
+});
+
+// Trigger auto-scrape in the background; respond immediately
+app.post('/api/trigger-auto-scrape', (req, res) => {
+  setImmediate(() => {
+    runAutoScrape().catch(err => log('error', 'Manual auto-scrape failed', { message: err.message }));
+  });
+  res.status(202).json({ triggered: true });
+});
+
+// Trigger auto-apply in the background; respond immediately
+app.post('/api/trigger-auto-apply', (req, res) => {
+  setImmediate(() => {
+    runAutoApply().catch(err => log('error', 'Manual auto-apply failed', { message: err.message }));
+  });
+  res.status(202).json({ triggered: true });
+});
+
+// Enable/disable automation via API and persist to settings
+app.put('/api/automation-toggle', (req, res) => {
+  const { auto_scrape, auto_apply } = req.body || {};
+
+  let changed = false;
+  if (typeof auto_scrape === 'boolean') {
+    state.autoScrape = auto_scrape;
+    changed = true;
+    if (auto_scrape) {
+      if (!autoScrapeInterval) startAutoScrape();
+      setImmediate(() => runAutoScrape().catch(e => log('error', 'Immediate auto-scrape failed', { message: e.message })));
+    } else {
+      stopAutoScrape();
+    }
+  }
+  if (typeof auto_apply === 'boolean') {
+    state.autoApply = auto_apply;
+    changed = true;
+    if (auto_apply) {
+      if (!autoApplyInterval) startAutoApply();
+    } else {
+      stopAutoApply();
+    }
+  }
+
+  if (changed) {
+    db.run('UPDATE settings SET auto_apply = ?, auto_scrape = ? WHERE id = 1', [state.autoApply ? 1 : 0, state.autoScrape ? 1 : 0], (err) => {
+      if (err) {
+        log('error', 'Failed to persist automation toggle', { message: err.message });
       }
     });
-  });
+  }
 
-  // Trigger auto-scrape in the background; respond immediately
-  app.post('/api/trigger-auto-scrape', (req, res) => {
-    setImmediate(() => {
-      runAutoScrape().catch(err => log('error', 'Manual auto-scrape failed', { message: err.message }));
-    });
-    res.status(202).json({ triggered: true });
-  });
-
-  // Trigger auto-apply in the background; respond immediately
-  app.post('/api/trigger-auto-apply', (req, res) => {
-    setImmediate(() => {
-      runAutoApply().catch(err => log('error', 'Manual auto-apply failed', { message: err.message }));
-    });
-    res.status(202).json({ triggered: true });
-  });
+  res.json({ success: true, automation: { autoScrapeEnabled: state.autoScrape, autoApplyEnabled: state.autoApply } });
+});
 
 // Serve frontend for non-API routes (SPA fallback)
 // Use a route regex to exclude /api and /webhook without needing an inline if-statement
