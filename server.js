@@ -12,12 +12,34 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { OpenAI } = require('openai');
 
+// Minimal structured logger with level gating and JSON output
+const LOG_LEVEL = (process.env.LOG_LEVEL || 'info').toLowerCase();
+const levels = { error: 0, warn: 1, info: 2, debug: 3 };
+function shouldLog(level) { return levels[level] <= (levels[LOG_LEVEL] ?? 2); }
+function log(level, message, extra) {
+  if (!shouldLog(level)) return;
+  const entry = {
+    level,
+    timestamp: new Date().toISOString(),
+    message,
+    ...(extra && typeof extra === 'object' ? { attributes: extra } : {})
+  };
+  const line = JSON.stringify(entry);
+  if (level === 'error') {
+    console.error(line);
+  } else if (level === 'warn') {
+    console.warn(line);
+  } else {
+    console.log(line);
+  }
+}
+
 // Global safety nets to prevent unexpected crashes in production
 process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION:', err && err.stack ? err.stack : err);
+  log('error', 'UNCAUGHT EXCEPTION', { error: err && err.stack ? err.stack : String(err) });
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('UNHANDLED REJECTION:', reason);
+  log('error', 'UNHANDLED REJECTION', { reason: reason && reason.stack ? reason.stack : String(reason) });
 });
 
 // Initialize Stripe only if API key is provided
@@ -25,7 +47,7 @@ let stripe = null;
 if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'your_stripe_key_here') {
   stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 } else {
-  console.warn('⚠️ STRIPE_SECRET_KEY not set - Stripe features disabled');
+  log('error', 'STRIPE_SECRET_KEY not set - Stripe features disabled');
 }
 
 // Runtime configuration via env (with sane defaults)
@@ -45,15 +67,38 @@ const DEFAULT_KEYWORDS = (process.env.DEFAULT_KEYWORDS || 'web development,pytho
   .split(',')
   .map(k => k.trim())
   .filter(Boolean);
+// Network safety timeouts
+const SCRAPE_TIMEOUT_MS = Number(process.env.SCRAPE_TIMEOUT_MS || 12000);
+const PY_SCRAPER_TIMEOUT_MS = Number(process.env.PY_SCRAPER_TIMEOUT_MS || 8000);
 
 const app = express();
 const parser = new Parser();
 const VERSION = require('./package.json').version || '0.0.0';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
+// In-memory metrics counters (reset on restart if using :memory: DB)
+const metrics = {
+  requests: 0,
+  scrapeRuns: 0,
+  proposalsGenerated: 0,
+  applicationsCreated: 0,
+  stripeEvents: 0,
+  timings: {
+    scrapeMs: [],
+    proposalMs: [],
+    autoApplyMs: []
+  }
+};
 
 // Middleware
 app.use(cors());
 app.use(express.static('public'));
+// Request counter middleware (exclude static assets by simple heuristic)
+app.use((req, res, next) => {
+  if (!req.path.match(/\.(js|css|png|jpg|svg|ico)$/)) {
+    metrics.requests++;
+  }
+  next();
+});
 
 // Stripe webhook endpoint (must be before express.json)
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -65,14 +110,15 @@ if (stripeWebhookSecret && stripe) {
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
     } catch (err) {
-      console.warn('⚠️ Webhook signature verification failed:', err.message);
+      log('warn', 'Webhook signature verification failed', { message: err.message });
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    metrics.stripeEvents++;
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        console.log('🔔 checkout.session.completed', session.id);
+        log('info', 'checkout.session.completed', { sessionId: session.id });
 
         const metadata = session.metadata || {};
         if (metadata.application_id) {
@@ -82,7 +128,7 @@ if (stripeWebhookSecret && stripe) {
             WHERE id = ?
           `, [session.amount_total / 100, metadata.application_id], (err) => {
             if (!err) {
-              console.log(`💰 Application ${metadata.application_id} marked as paid: $${session.amount_total / 100}`);
+              log('info', 'Application marked as paid', { applicationId: metadata.application_id, amount: session.amount_total / 100 });
             }
           });
         }
@@ -90,22 +136,22 @@ if (stripeWebhookSecret && stripe) {
       }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
-        console.log('🔔 invoice.payment_succeeded', invoice.id);
+        log('info', 'invoice.payment_succeeded', { invoiceId: invoice.id });
         break;
       }
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object;
-        console.log('💵 Payment received:', paymentIntent.amount / 100);
+        log('info', 'payment_intent.succeeded', { amount: paymentIntent.amount / 100 });
         break;
       }
       default:
-        console.log(`Unhandled event type ${event.type}`);
+        log('warn', 'Unhandled Stripe event type', { type: event.type });
     }
 
     res.json({ received: true });
   });
 } else {
-  console.info('Stripe webhook disabled: STRIPE_WEBHOOK_SECRET missing or Stripe not configured.');
+  log('info', 'Stripe webhook disabled: STRIPE_WEBHOOK_SECRET missing or Stripe not configured.');
 }
 
 // JSON body parser should come after webhook raw parser
@@ -125,24 +171,24 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
   try {
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   } catch (e) {
-    console.warn('⚠️ Failed to initialize OpenAI client:', e.message);
+    log('warn', 'Failed to initialize OpenAI client', { message: e.message });
     openai = null;
   }
 } else {
-  console.warn('⚠️ OPENAI_API_KEY not set — using fallback proposal generator.');
+  log('error', 'OPENAI_API_KEY not set — using fallback proposal generator.');
 }
 
 // Warn when API keys are not set (do not log actual secrets)
-if (!process.env.STRIPE_SECRET_KEY) console.warn('Warning: STRIPE_SECRET_KEY not set — Stripe payments disabled or will error if used.');
-if (!process.env.OPENAI_API_KEY) console.warn('Warning: OPENAI_API_KEY not set — AI proposal generation will use fallback templates.');
+if (!process.env.STRIPE_SECRET_KEY) log('error', 'Warning: STRIPE_SECRET_KEY not set — Stripe payments disabled or will error if used.');
+if (!process.env.OPENAI_API_KEY) log('error', 'Warning: OPENAI_API_KEY not set — AI proposal generation will use fallback templates.');
 
 // Database Setup - use in-memory for Railway (ephemeral filesystem)
 const dbPath = process.env.DATABASE_PATH || (process.env.RAILWAY_ENVIRONMENT ? ':memory:' : './freelance.db');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('❌ Database error:', err);
+    log('error', 'Database error', { error: err && err.message ? err.message : String(err) });
   } else {
-    console.log(`📊 Database connected (${dbPath})`);
+    log('info', `Database connected (${dbPath})`);
     initDatabase();
   }
 });
@@ -199,18 +245,27 @@ function initDatabase() {
     VALUES (1, 0, 100, 5000)
   `);
 
-  console.log('✅ Database initialized');
+  log('info', 'Database initialized');
 }
 
 // ============================================
 // JOB SCRAPING FUNCTIONS
 // ============================================
 
+// Generic timeout wrapper to prevent long-hangs
+function withTimeout(promise, ms, label = 'operation') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms))
+  ]);
+}
+
 // Scrape Upwork RSS Feed
 async function scrapeUpworkRSS(keyword = 'web development') {
   try {
+    const t0 = Date.now();
     const rssUrl = `https://www.upwork.com/ab/feed/jobs/rss?q=${encodeURIComponent(keyword)}&sort=recency`;
-    const feed = await parser.parseURL(rssUrl);
+    const feed = await withTimeout(parser.parseURL(rssUrl), SCRAPE_TIMEOUT_MS, 'Upwork RSS');
 
     const jobs = feed.items.map(item => {
       // Extract budget from description
@@ -231,9 +286,10 @@ async function scrapeUpworkRSS(keyword = 'web development') {
       };
     });
 
+    metrics.timings.scrapeMs.push(Date.now() - t0);
     return jobs;
   } catch (error) {
-    console.error('Upwork scraping error:', error.message);
+    log('warn', 'Upwork scraping error', { message: error.message });
     return [];
   }
 }
@@ -241,8 +297,10 @@ async function scrapeUpworkRSS(keyword = 'web development') {
 // Scrape using Python FastAPI service
 async function scrapePythonService(keyword = 'web development', location = '') {
   try {
+    const t0 = Date.now();
     const response = await axios.get(`http://localhost:8000/jobs/search`, {
-      params: { q: keyword, source: 'indeed', location: location }
+      params: { q: keyword, source: 'indeed', location: location },
+      timeout: PY_SCRAPER_TIMEOUT_MS
     });
 
     const jobs = response.data.map(item => {
@@ -263,9 +321,10 @@ async function scrapePythonService(keyword = 'web development', location = '') {
       };
     });
 
+    metrics.timings.scrapeMs.push(Date.now() - t0);
     return jobs;
   } catch (error) {
-    console.error('Python scraper service error:', error.message);
+    log('warn', 'Python scraper service error', { message: error.message });
     return [];
   }
 }
@@ -273,10 +332,11 @@ async function scrapePythonService(keyword = 'web development', location = '') {
 // Scrape Indeed RSS Feed
 async function scrapeIndeedRSS(keyword = 'web development', location = '') {
   try {
+    const t0 = Date.now();
     const q = encodeURIComponent(keyword);
     const loc = encodeURIComponent(location || '');
     const rssUrl = `https://rss.indeed.com/rss?q=${q}&l=${loc}`;
-    const feed = await parser.parseURL(rssUrl);
+    const feed = await withTimeout(parser.parseURL(rssUrl), SCRAPE_TIMEOUT_MS, 'Indeed RSS');
 
     const jobs = feed.items.map(item => {
       const budgetMatch = item.contentSnippet?.match(/\$[\d,]+/);
@@ -296,9 +356,10 @@ async function scrapeIndeedRSS(keyword = 'web development', location = '') {
       };
     });
 
+    metrics.timings.scrapeMs.push(Date.now() - t0);
     return jobs;
   } catch (error) {
-    console.error('Indeed scraping error:', error.message);
+    log('warn', 'Indeed scraping error', { message: error.message });
     return [];
   }
 }
@@ -386,6 +447,7 @@ function calculateAIConfidence(title, description) {
 // ============================================
 
 async function generateProposal(jobTitle, jobDescription, jobBudget) {
+  const t0 = Date.now();
   // Check if we have a real OpenAI key
   const hasRealKey = process.env.OPENAI_API_KEY &&
     process.env.OPENAI_API_KEY !== 'demo-mode' &&
@@ -419,9 +481,11 @@ Write only the proposal text, nothing else.`;
         max_tokens: 300
       });
 
-      return response.choices[0].message.content.trim();
+      const text = response.choices[0].message.content.trim();
+      metrics.timings.proposalMs.push(Date.now() - t0);
+      return text;
     } catch (error) {
-      console.log('⚠️ OpenAI error, using fallback proposal');
+      log('warn', 'OpenAI error, using fallback proposal', { message: error.message });
       // Fall through to fallback
     }
   }
@@ -433,7 +497,7 @@ Write only the proposal text, nothing else.`;
         jobDescription.toLowerCase().includes('data') ? 'data processing' :
           'web development';
 
-  return `Hi,
+  const fallback = `Hi,
 
 I can complete your "${jobTitle}" with high quality and fast delivery.
 
@@ -451,6 +515,8 @@ Available to start immediately!
 
 Best regards,
 NetworkNiceIT Tec`;
+  metrics.timings.proposalMs.push(Date.now() - t0);
+  return fallback;
 }
 // ============================================
 // API ENDPOINTS
@@ -525,35 +591,46 @@ app.get('/api/jobs', (req, res) => {
 // Scrape new jobs
 app.post('/api/scrape', async (req, res) => {
   try {
-    const { keywords } = req.body;
-    const searchTerms = keywords || DEFAULT_KEYWORDS;
+    const { keywords } = req.body || {};
+    const { source = 'upwork', location = '', limit } = req.body || {};
+    const maxKeywords = Math.max(1, Math.min(Number(limit || 3), (keywords || DEFAULT_KEYWORDS).length));
+    const searchTerms = (keywords || DEFAULT_KEYWORDS).slice(0, maxKeywords);
 
-    let allJobs = [];
-
-    // support querying Indeed as an alternative source
-    const { source = 'upwork', location = '' } = req.body;
-
-    for (const keyword of searchTerms) {
-      let jobs = [];
-      if (source === 'indeed') {
-        jobs = await scrapeIndeedRSS(keyword, location);
-      } else if (source === 'both') {
-        const up = await scrapeUpworkRSS(keyword);
-        const indd = await scrapeIndeedRSS(keyword, location);
-        jobs = up.concat(indd);
-      } else {
-        jobs = await scrapeUpworkRSS(keyword);
+    // Run scraping concurrently with per-source timeouts
+    const tasks = searchTerms.map(async (keyword) => {
+      try {
+        if (source === 'indeed') {
+          return await scrapeIndeedRSS(keyword, location);
+        } else if (source === 'both') {
+          const [up, indd] = await Promise.allSettled([
+            scrapeUpworkRSS(keyword),
+            scrapeIndeedRSS(keyword, location)
+          ]);
+          const upJobs = up.status === 'fulfilled' ? up.value : [];
+          const inJobs = indd.status === 'fulfilled' ? indd.value : [];
+          return upJobs.concat(inJobs);
+        } else {
+          return await scrapeUpworkRSS(keyword);
+        }
+      } catch (e) {
+        log('warn', 'Keyword scrape failed', { keyword, message: e.message });
+        return [];
       }
-      allJobs = allJobs.concat(jobs);
-    }
+    });
+
+    const results = await Promise.allSettled(tasks);
+    const allJobs = results.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
 
     const inserted = await insertJobs(allJobs);
+    metrics.scrapeRuns++;
 
     res.json({
       success: true,
       scraped: allJobs.length,
       inserted: inserted,
-      message: `Found ${allJobs.length} jobs, added ${inserted} new ones`
+      message: `Found ${allJobs.length} jobs, added ${inserted} new ones`,
+      keywordsProcessed: searchTerms.length,
+      source
     });
 
   } catch (error) {
@@ -572,6 +649,7 @@ app.post('/api/generate-proposal', async (req, res) => {
       }
 
       const proposal = await generateProposal(job.title, job.description, job.budget);
+      metrics.proposalsGenerated++;
 
       res.json({
         success: true,
@@ -596,6 +674,7 @@ app.post('/api/apply', async (req, res) => {
 
       // Generate proposal if not provided
       const proposal = custom_proposal || await generateProposal(job.title, job.description, job.budget);
+      metrics.proposalsGenerated++;
 
       // Create application
       db.run(`
@@ -607,8 +686,9 @@ app.post('/api/apply', async (req, res) => {
         }
 
         // Update job status
-        db.run('UPDATE jobs SET status = ? WHERE id = ?', ['applied', job_id]);
-
+        db.run('UPDATE jobs SET status = ? WHERE id = ?', ['applied', job.id]);
+        metrics.applicationsCreated++;
+        log('info', 'Application created', { jobId: job.id, title: job.title, confidence: job.ai_confidence, budget: job.budget });
         res.json({
           success: true,
           application_id: this.lastID,
@@ -673,7 +753,7 @@ app.put('/api/applications/:id', (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ error: 'Application not found' });
     } else {
-      console.log(`✅ Application ${id} updated: ${status || 'status unchanged'}, earnings: ${earnings || 'unchanged'}`);
+      log('info', 'Application updated', { id, status: status || 'unchanged', earnings: earnings || 'unchanged' });
       res.json({ success: true, message: 'Application updated' });
     }
   });
@@ -757,6 +837,28 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
+// Metrics endpoint (JSON counters)
+app.get('/metrics', (req, res) => {
+  const avg = arr => (arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0);
+  res.json({
+    version: VERSION,
+    metrics: {
+      ...metrics,
+      timings: {
+        scrapeAvgMs: avg(metrics.timings.scrapeMs),
+        proposalAvgMs: avg(metrics.timings.proposalMs),
+        autoApplyAvgMs: avg(metrics.timings.autoApplyMs),
+        samples: {
+          scrape: metrics.timings.scrapeMs.length,
+          proposal: metrics.timings.proposalMs.length,
+          autoApply: metrics.timings.autoApplyMs.length,
+        }
+      }
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Get settings
 app.get('/api/settings', (req, res) => {
   db.get('SELECT * FROM settings WHERE id = 1', [], (err, row) => {
@@ -803,39 +905,40 @@ let autoScrapeInterval;
 let autoApplyInterval;
 
 async function runAutoScrape() {
-  console.log('🔍 Auto-scraping jobs from all sources...');
+  log('info', 'Auto-scraping jobs from all sources...');
   let all = [];
 
   for (const keyword of DEFAULT_KEYWORDS) {
     // Try RSS feeds (Python service not available on Railway)
     const [upworkJobs, indeedJobs] = await Promise.all([
-      scrapeUpworkRSS(keyword).catch(e => { console.log(`Upwork: ${e.message}`); return []; }),
-      scrapeIndeedRSS(keyword).catch(e => { console.log(`Indeed: ${e.message}`); return []; })
+      scrapeUpworkRSS(keyword).catch(e => { log('warn', 'Upwork scrape error', { message: e.message }); return []; }),
+      scrapeIndeedRSS(keyword).catch(e => { log('warn', 'Indeed scrape error', { message: e.message }); return []; })
     ]);
     all = all.concat(upworkJobs, indeedJobs);
 
     if (upworkJobs.length > 0 || indeedJobs.length > 0) {
-      console.log(`✅ Found ${upworkJobs.length + indeedJobs.length} jobs for "${keyword}"`);
+      log('info', `Found ${upworkJobs.length + indeedJobs.length} jobs`, { keyword });
     }
   }
 
   const inserted = await insertJobs(all);
-  console.log(`✅ Auto-scrape complete: ${all.length} jobs found, ${inserted} new jobs inserted`);
+  log('info', 'Auto-scrape complete', { found: all.length, inserted });
 
   // Trigger auto-apply immediately after scraping if enabled
   if (AUTO_APPLY_ENABLED && inserted > 0) {
-    console.log(`🎯 Triggering auto-apply for ${inserted} new jobs...`);
+    log('info', 'Triggering auto-apply', { newJobs: inserted });
     await runAutoApply();
   }
 }
 
 async function runAutoApply() {
   if (!AUTO_APPLY_ENABLED) {
-    console.log('⏸️ Auto-apply disabled');
+    log('info', 'Auto-apply disabled');
     return;
   }
 
-  console.log('🤖 Running auto-apply...');
+  log('info', 'Running auto-apply...');
+  const t0 = Date.now();
 
   db.all(`
     SELECT * FROM jobs
@@ -845,23 +948,23 @@ async function runAutoApply() {
     LIMIT 10
   `, [DEFAULT_MIN_CONFIDENCE], async (err, rows) => {
     if (err) {
-      console.error('Auto-apply error:', err.message);
+      log('error', 'Auto-apply error', { message: err.message });
       return;
     }
 
     if (!rows || rows.length === 0) {
-      console.log('📭 No jobs available to apply to');
+      log('info', 'No jobs available to apply to');
       return;
     }
 
-    console.log(`🎯 Found ${rows.length} high-confidence jobs to apply to`);
+    log('info', 'High-confidence jobs selected', { count: rows.length });
     let applied = 0;
 
     for (const job of rows) {
       // Budget filter (basic numeric parse)
       const budgetValue = parseInt(String(job.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
       if (budgetValue > 0 && (budgetValue < DEFAULT_MIN_BUDGET || budgetValue > DEFAULT_MAX_BUDGET)) {
-        console.log(`⏭️ Skipping "${job.title}" - budget $${budgetValue} out of range`);
+        log('info', 'Skipping job - budget out of range', { title: job.title, budget: budgetValue });
         continue;
       }
 
@@ -874,7 +977,7 @@ async function runAutoApply() {
         if (!applyErr) {
           db.run('UPDATE jobs SET status = ? WHERE id = ?', ['applied', job.id]);
           applied++;
-          console.log(`✅ Auto-applied to: ${job.title} (Confidence: ${job.ai_confidence}%, Budget: ${job.budget})`);
+          log('info', 'Auto-applied', { title: job.title, confidence: job.ai_confidence, budget: job.budget });
         }
       });
 
@@ -882,7 +985,8 @@ async function runAutoApply() {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    console.log(`💼 Auto-apply complete: ${applied} applications submitted`);
+    metrics.timings.autoApplyMs.push(Date.now() - t0);
+    log('info', 'Auto-apply complete', { applicationsSubmitted: applied });
   });
 }
 
@@ -899,38 +1003,39 @@ function startAutoApply() {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`
-  🚀 AI FREELANCE BACKEND RUNNING!
-  
-  📡 Server: http://localhost:${PORT}
-  🔗 API Endpoints:
-     GET  /api/health - Check status
-     GET  /api/jobs - Get all jobs
-     POST /api/scrape - Scrape new jobs
-     POST /api/generate-proposal - Generate AI proposal
-     POST /api/apply - Apply to job
-     GET  /api/applications - Get applications
-     GET  /api/stats - Get statistics
-     GET  /api/settings - Get settings
-     PUT  /api/settings - Update settings
-  
-  🤖 Auto-apply: ${AUTO_APPLY_ENABLED ? 'ENABLED ✅' : 'DISABLED ⏸️'}
-  🕷️ Auto-scrape: ${AUTO_SCRAPE_ENABLED ? 'ENABLED ✅' : 'DISABLED ⏸️'}
-  🎯 Scrape interval: ${SCRAPE_INTERVAL_MINUTES} minutes
-  💰 Budget range: $${DEFAULT_MIN_BUDGET} - $${DEFAULT_MAX_BUDGET}
-  🎲 Min confidence: ${DEFAULT_MIN_CONFIDENCE}%
-  `);
+  // Single concise startup entry for clean production logs
+  log('info', 'Service started', {
+    server: `http://localhost:${PORT}`,
+    endpoints: [
+      'GET /api/health',
+      'GET /api/jobs',
+      'POST /api/scrape',
+      'POST /api/generate-proposal',
+      'POST /api/apply',
+      'GET /api/applications',
+      'GET /api/stats',
+      'GET /api/settings',
+      'PUT /api/settings'
+    ],
+    automation: {
+      autoApply: AUTO_APPLY_ENABLED ? 'ENABLED' : 'DISABLED',
+      autoScrape: AUTO_SCRAPE_ENABLED ? 'ENABLED' : 'DISABLED',
+      scrapeIntervalMinutes: SCRAPE_INTERVAL_MINUTES,
+      budgetRange: `$${DEFAULT_MIN_BUDGET}-$${DEFAULT_MAX_BUDGET}`,
+      minConfidencePercent: DEFAULT_MIN_CONFIDENCE
+    }
+  });
 
   // Start scheduled tasks
   if (AUTO_SCRAPE_ENABLED) {
     // Run initial scrape quickly, then start interval
     setTimeout(() => {
       runAutoScrape().then(() => {
-        console.log('⏰ Setting up recurring auto-scraper...');
+        log('info', 'Setting up recurring auto-scraper...');
         startAutoScrape();
         if (AUTO_APPLY_ENABLED) startAutoApply();
       }).catch(err => {
-        console.error('❌ Auto-scrape failed:', err.message);
+        log('error', 'Auto-scrape failed', { message: err.message });
       });
     }, 10000);
   } else {
@@ -949,6 +1054,7 @@ app.listen(PORT, () => {
 // Create checkout session (one-time payment)
 app.post('/api/create-checkout-session', async (req, res) => {
   if (!stripe) {
+    log('warn', 'Create checkout session attempted without Stripe');
     return res.status(503).json({ error: 'Stripe is not configured' });
   }
   try {
@@ -963,8 +1069,10 @@ app.post('/api/create-checkout-session', async (req, res) => {
       cancel_url: `${base}/cancel`,
     });
 
+    log('info', 'Checkout session created', { sessionId: session.id });
     res.json({ url: session.url, sessionId: session.id });
   } catch (error) {
+    log('error', 'Checkout session error', { message: error.message });
     res.status(500).json({ error: error.message });
   }
 });
@@ -972,6 +1080,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
 // Create subscription session
 app.post('/api/create-subscription-session', async (req, res) => {
   if (!stripe) {
+    log('warn', 'Create subscription session attempted without Stripe');
     return res.status(503).json({ error: 'Stripe is not configured' });
   }
   try {
@@ -986,8 +1095,10 @@ app.post('/api/create-subscription-session', async (req, res) => {
       cancel_url: `${base}/cancel`,
     });
 
+    log('info', 'Subscription session created', { sessionId: session.id });
     res.json({ url: session.url, sessionId: session.id });
   } catch (error) {
+    log('error', 'Subscription session error', { message: error.message });
     res.status(500).json({ error: error.message });
   }
 });
@@ -1012,6 +1123,7 @@ app.get('/cancel', (req, res) => {
 // Test checkout endpoint: create a small test session and redirect
 app.get('/api/test-checkout', async (req, res) => {
   if (!stripe) {
+    log('warn', 'Test checkout attempted without Stripe');
     return res.status(503).send('Stripe is not configured');
   }
   try {
@@ -1039,8 +1151,10 @@ app.get('/api/test-checkout', async (req, res) => {
     if (application_id) payload.metadata = { application_id };
 
     const session = await stripe.checkout.sessions.create(payload);
+    log('info', 'Test checkout session created', { sessionId: session.id, amount });
     return res.redirect(session.url);
   } catch (error) {
+    log('error', 'Test checkout error', { message: error.message });
     return res.status(500).send(error.message);
   }
 });
@@ -1057,7 +1171,7 @@ app.get(/^\/(?!api|webhook).*/, (req, res, next) => {
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n👋 Shutting down...');
+  log('info', 'Shutting down...');
   clearInterval(autoScrapeInterval);
   clearInterval(autoApplyInterval);
   db.close();
