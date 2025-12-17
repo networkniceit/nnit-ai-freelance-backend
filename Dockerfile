@@ -17,6 +17,9 @@ WORKDIR /app
 # Create a non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+# Railway/containers: ensure /data exists and is writable for persistence
+RUN mkdir -p /data && chown -R appuser:appgroup /data
+
 # Copy only production deps and built files from build stage
 COPY --from=build /app/package*.json ./
 RUN npm ci --production
