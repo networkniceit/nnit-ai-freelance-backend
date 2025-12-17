@@ -746,16 +746,14 @@ app.post('/api/scrape', async (req, res) => {
       try {
         if (source === 'indeed') {
           // Prefer the optional scraper service if configured (more robust than direct RSS in some environments)
-          if (PY_SCRAPER_BASE_URL && !PY_SCRAPER_BASE_URL.includes('localhost')) {
-            return await scrapePythonService(keyword, location);
-          }
+          if (PY_SCRAPER_BASE_URL) return await scrapePythonService(keyword, location);
           return await scrapeIndeedRSS(keyword, location);
         } else if (source === 'python' || source === 'scraper') {
           return await scrapePythonService(keyword, location);
         } else if (source === 'both') {
           const [up, indd] = await Promise.allSettled([
             scrapeUpworkRSS(keyword),
-            (PY_SCRAPER_BASE_URL && !PY_SCRAPER_BASE_URL.includes('localhost')
+            (PY_SCRAPER_BASE_URL
               ? scrapePythonService(keyword, location)
               : scrapeIndeedRSS(keyword, location))
           ]);
