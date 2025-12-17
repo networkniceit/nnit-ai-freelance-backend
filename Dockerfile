@@ -1,29 +1,20 @@
-### Multi-stage Dockerfile for smaller, secure production image
-FROM node:18 AS build
+### Production Dockerfile
+### Use Debian-based image to avoid native module issues (e.g., sqlite3) on Alpine.
+FROM node:18-slim
+
 WORKDIR /app
 
-# Install dev dependencies to allow builds if needed
+# Install production dependencies first (better caching)
 COPY package*.json ./
-RUN npm ci --production=false
+RUN npm ci --omit=dev
 
-# Copy source and build (if you have a build step)
+# Copy app source
 COPY . .
-RUN npm run build --if-present || true
-
-### Production image: use slimmer runtime
-FROM node:18-alpine AS runtime
-WORKDIR /app
 
 # Create a non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Railway/containers: ensure /data exists and is writable for persistence
-RUN mkdir -p /data && chown -R appuser:appgroup /data
-
-# Copy only production deps and built files from build stage
-COPY --from=build /app/package*.json ./
-RUN npm ci --production
-COPY --from=build /app .
+RUN groupadd -r appgroup && useradd -r -g appgroup -m appuser \
+	&& mkdir -p /data \
+	&& chown -R appuser:appgroup /data /app
 
 ENV NODE_ENV=production
 
