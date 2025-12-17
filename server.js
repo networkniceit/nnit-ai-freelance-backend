@@ -87,6 +87,10 @@ const app = express();
 const parser = new Parser();
 const VERSION = require('./package.json').version || '0.0.0';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
+// Readiness flag for platform health probes (only true once DB/schema init completes)
+const readiness = {
+  dbInitialized: false
+};
 // In-memory metrics counters (reset on restart if using :memory: DB)
 const metrics = {
   requests: 0,
@@ -313,6 +317,7 @@ async function initDatabase() {
   `);
 
   log('info', 'Database initialized');
+  readiness.dbInitialized = true;
 
   // Load automation flags from settings (prefer explicit 0/1 over env defaults)
   try {
@@ -690,6 +695,9 @@ app.get('/api/ping', (req, res) => {
 
 // Ready endpoint (simple OK for platform health probes)
 app.get('/ready', (req, res) => {
+  if (!readiness.dbInitialized) {
+    return res.status(503).send('starting');
+  }
   res.status(200).send('ok');
 });
 
