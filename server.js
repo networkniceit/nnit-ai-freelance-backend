@@ -77,9 +77,19 @@ const PY_SCRAPER_TIMEOUT_MS = Number(process.env.PY_SCRAPER_TIMEOUT_MS || 8000);
 // - http://localhost:8000 (local dev)
 // - https://<your-scraper-service>.up.railway.app (production)
 // On Railway, default to disabled unless explicitly configured.
+function normalizeBaseUrl(raw) {
+  const value = String(raw || '').trim().replace(/\/$/, '');
+  if (!value) return '';
+  if (value.includes('://')) return value;
+  // If user pastes only a host (e.g. <service>.up.railway.app), assume https.
+  // If localhost/loopback, assume http.
+  const isLocal = /^localhost(?::\d+)?$/i.test(value) || /^127\.0\.0\.1(?::\d+)?$/.test(value);
+  return `${isLocal ? 'http' : 'https'}://${value}`;
+}
+
 const PY_SCRAPER_BASE_URL = (() => {
   const explicit = (process.env.PY_SCRAPER_BASE_URL || process.env.PY_SCRAPER_URL || '').trim();
-  if (explicit) return explicit.replace(/\/$/, '');
+  if (explicit) return normalizeBaseUrl(explicit);
   return process.env.RAILWAY_ENVIRONMENT ? '' : 'http://localhost:8000';
 })();
 
