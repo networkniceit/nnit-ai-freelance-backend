@@ -211,13 +211,35 @@ const db = new sqlite3.Database(dbPath, (err) => {
     log('error', 'Database error', { error: err && err.message ? err.message : String(err) });
   } else {
     log('info', `Database connected (${dbPath})`);
-    initDatabase();
+    initDatabase().catch((e) => {
+      // Never crash the process for schema init issues; log and continue.
+      log('error', 'Database initialization failed', { message: e && e.message ? e.message : String(e) });
+    });
   }
 });
 
 // Initialize Database Schema
-function initDatabase() {
-  db.run(`
+function dbRun(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
+  });
+}
+
+function dbGet(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) return reject(err);
+      resolve(row);
+    });
+  });
+}
+
+async function initDatabase() {
+  // Order matters: ensure tables exist before ALTER/SELECT.
+  await dbRun(`
     CREATE TABLE IF NOT EXISTS jobs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       external_id TEXT UNIQUE,
@@ -236,7 +258,7 @@ function initDatabase() {
     )
   `);
 
-  db.run(`
+  await dbRun(`
     CREATE TABLE IF NOT EXISTS applications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id INTEGER,
@@ -249,7 +271,7 @@ function initDatabase() {
     )
   `);
 
-  db.run(`
+  await dbRun(`
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY,
       auto_apply BOOLEAN DEFAULT 0,
@@ -263,27 +285,35 @@ function initDatabase() {
   `);
 
   // Migration: older DBs may not have auto_scrape
-  db.run('ALTER TABLE settings ADD COLUMN auto_scrape BOOLEAN DEFAULT 0', () => {});
+  try {
+    await dbRun('ALTER TABLE settings ADD COLUMN auto_scrape BOOLEAN DEFAULT 0');
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    // Ignore expected cases: already exists or table doesn't need migration.
+    if (!/duplicate column name/i.test(msg)) {
+      log('warn', 'Settings migration warning', { message: msg });
+    }
+  }
 
-  // Insert default settings if not exists
-  db.run(`
-    INSERT OR IGNORE INTO settings (id, auto_apply, min_budget, max_budget)
-    VALUES (1, 0, 100, 5000)
+  // Ensure a row exists for id=1 with valid JSON defaults for UI parsing.
+  await dbRun(`
+    INSERT OR IGNORE INTO settings (id, auto_apply, auto_scrape, min_budget, max_budget, min_confidence, platforms, job_types)
+    VALUES (1, 0, 0, 100, 5000, 85, '["Upwork","Fiverr","Freelancer"]', '["coding","data-entry","research"]')
   `);
 
   log('info', 'Database initialized');
 
   // Load automation flags from settings (prefer explicit 0/1 over env defaults)
-  db.get('SELECT auto_apply, auto_scrape FROM settings WHERE id = 1', [], (err, row) => {
-    if (err) {
-      log('warn', 'Failed to load automation flags from settings', { message: err.message });
-      return;
+  try {
+    const row = await dbGet('SELECT auto_apply, auto_scrape FROM settings WHERE id = 1');
+    if (row) {
+      if (row.auto_apply === 0 || row.auto_apply === 1) state.autoApply = row.auto_apply === 1;
+      if (row.auto_scrape === 0 || row.auto_scrape === 1) state.autoScrape = row.auto_scrape === 1;
+      log('info', 'Automation flags loaded', { autoApply: state.autoApply, autoScrape: state.autoScrape });
     }
-    if (!row) return;
-    if (row.auto_apply === 0 || row.auto_apply === 1) state.autoApply = row.auto_apply === 1;
-    if (row.auto_scrape === 0 || row.auto_scrape === 1) state.autoScrape = row.auto_scrape === 1;
-    log('info', 'Automation flags loaded', { autoApply: state.autoApply, autoScrape: state.autoScrape });
-  });
+  } catch (e) {
+    log('warn', 'Failed to load automation flags from settings', { message: e && e.message ? e.message : String(e) });
+  }
 }
 
 // ============================================
@@ -1293,6 +1323,14 @@ app.get(/^\/(?!api|webhook).*/, (req, res, next) => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   log('info', 'Shutting down...');
+  clearInterval(autoScrapeInterval);
+  clearInterval(autoApplyInterval);
+  db.close();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  log('info', 'Shutting down (SIGTERM)...');
   clearInterval(autoScrapeInterval);
   clearInterval(autoApplyInterval);
   db.close();
