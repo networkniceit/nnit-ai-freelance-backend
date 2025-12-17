@@ -1159,6 +1159,40 @@ app.get('/api/test-checkout', async (req, res) => {
   }
 });
 
+  // ============================================
+  // AUTOMATION CONTROL ENDPOINTS (manual triggers and status)
+  // ============================================
+
+  // Report automation status and effective config
+  app.get('/api/automation-status', (req, res) => {
+    res.json({
+      automation: {
+        autoScrapeEnabled: AUTO_SCRAPE_ENABLED,
+        autoApplyEnabled: AUTO_APPLY_ENABLED,
+        scrapeIntervalMinutes: SCRAPE_INTERVAL_MINUTES,
+        minConfidence: DEFAULT_MIN_CONFIDENCE,
+        budgetRange: { min: DEFAULT_MIN_BUDGET, max: DEFAULT_MAX_BUDGET },
+        defaultKeywords: DEFAULT_KEYWORDS
+      }
+    });
+  });
+
+  // Trigger auto-scrape in the background; respond immediately
+  app.post('/api/trigger-auto-scrape', (req, res) => {
+    setImmediate(() => {
+      runAutoScrape().catch(err => log('error', 'Manual auto-scrape failed', { message: err.message }));
+    });
+    res.status(202).json({ triggered: true });
+  });
+
+  // Trigger auto-apply in the background; respond immediately
+  app.post('/api/trigger-auto-apply', (req, res) => {
+    setImmediate(() => {
+      runAutoApply().catch(err => log('error', 'Manual auto-apply failed', { message: err.message }));
+    });
+    res.status(202).json({ triggered: true });
+  });
+
 // Serve frontend for non-API routes (SPA fallback)
 // Use a route regex to exclude /api and /webhook without needing an inline if-statement
 app.get(/^\/(?!api|webhook).*/, (req, res, next) => {
