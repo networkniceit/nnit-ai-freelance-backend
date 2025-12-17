@@ -73,6 +73,15 @@ const DEFAULT_KEYWORDS = (process.env.DEFAULT_KEYWORDS || 'web development,pytho
 // Network safety timeouts
 const SCRAPE_TIMEOUT_MS = Number(process.env.SCRAPE_TIMEOUT_MS || 12000);
 const PY_SCRAPER_TIMEOUT_MS = Number(process.env.PY_SCRAPER_TIMEOUT_MS || 8000);
+// Optional external scraper service (FastAPI) base URL. Example:
+// - http://localhost:8000 (local dev)
+// - https://<your-scraper-service>.up.railway.app (production)
+// On Railway, default to disabled unless explicitly configured.
+const PY_SCRAPER_BASE_URL = (() => {
+  const explicit = (process.env.PY_SCRAPER_BASE_URL || process.env.PY_SCRAPER_URL || '').trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+  return process.env.RAILWAY_ENVIRONMENT ? '' : 'http://localhost:8000';
+})();
 
 const app = express();
 const parser = new Parser();
@@ -330,12 +339,67 @@ function withTimeout(promise, ms, label = 'operation') {
   ]);
 }
 
+// Some RSS endpoints (notably Upwork) may return HTML/blocked content unless a browser-like User-Agent is used.
+// Fetch RSS with axios + headers, then parse the XML string.
+async function fetchAndParseRss(rssUrl, label) {
+  const response = await withTimeout(
+    axios.get(rssUrl, {
+      timeout: SCRAPE_TIMEOUT_MS,
+      maxRedirects: 5,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; NNITBot/1.0; +https://railway.app)',
+        'Accept': 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5'
+      },
+      // treat non-2xx as errors we can handle consistently
+      validateStatus: (status) => status >= 200 && status < 300
+    }),
+    SCRAPE_TIMEOUT_MS,
+    label
+  );
+
+  const contentType = String(response.headers?.['content-type'] || '');
+  const body = response.data;
+  if (typeof body !== 'string') {
+    log('warn', `${label} returned non-text body`, { contentType });
+    return null;
+  }
+
+  // Very lightweight sanity check before trying to parse
+  const looksLikeXml = body.includes('<rss') || body.includes('<feed') || body.includes('<?xml');
+  if (!looksLikeXml) {
+    log('warn', `${label} returned non-RSS content`, {
+      contentType,
+      sample: body.slice(0, 200)
+    });
+    return null;
+  }
+
+  return parser.parseString(body);
+}
+
 // Scrape Upwork RSS Feed
 async function scrapeUpworkRSS(keyword = 'web development') {
   try {
     const t0 = Date.now();
-    const rssUrl = `https://www.upwork.com/ab/feed/jobs/rss?q=${encodeURIComponent(keyword)}&sort=recency`;
-    const feed = await withTimeout(parser.parseURL(rssUrl), SCRAPE_TIMEOUT_MS, 'Upwork RSS');
+    // Upwork has changed RSS endpoints over time; try a couple of known variants.
+    const q = encodeURIComponent(keyword);
+    const candidates = [
+      `https://www.upwork.com/nx/search/jobs/rss?sort=recency&q=${q}`,
+      `https://www.upwork.com/ab/feed/jobs/rss?q=${q}&sort=recency`
+    ];
+
+    let feed = null;
+    for (const rssUrl of candidates) {
+      try {
+        feed = await fetchAndParseRss(rssUrl, 'Upwork RSS');
+        if (feed && Array.isArray(feed.items) && feed.items.length > 0) break;
+      } catch (e) {
+        log('warn', 'Upwork RSS fetch failed', { message: e.message, rssUrl });
+        feed = null;
+      }
+    }
+
+    if (!feed || !Array.isArray(feed.items) || feed.items.length === 0) return [];
 
     const jobs = feed.items.map(item => {
       // Extract budget from description
@@ -367,8 +431,11 @@ async function scrapeUpworkRSS(keyword = 'web development') {
 // Scrape using Python FastAPI service
 async function scrapePythonService(keyword = 'web development', location = '') {
   try {
+    if (!PY_SCRAPER_BASE_URL) {
+      throw new Error('Python scraper service is not configured (set PY_SCRAPER_BASE_URL)');
+    }
     const t0 = Date.now();
-    const response = await axios.get(`http://localhost:8000/jobs/search`, {
+    const response = await axios.get(`${PY_SCRAPER_BASE_URL}/jobs/search`, {
       params: { q: keyword, source: 'indeed', location: location },
       timeout: PY_SCRAPER_TIMEOUT_MS
     });
@@ -405,8 +472,10 @@ async function scrapeIndeedRSS(keyword = 'web development', location = '') {
     const t0 = Date.now();
     const q = encodeURIComponent(keyword);
     const loc = encodeURIComponent(location || '');
-    const rssUrl = `https://rss.indeed.com/rss?q=${q}&l=${loc}`;
-    const feed = await withTimeout(parser.parseURL(rssUrl), SCRAPE_TIMEOUT_MS, 'Indeed RSS');
+    // Use the www.rss.indeed.com host (matches the Python scraper and tends to behave better).
+    const rssUrl = `https://www.rss.indeed.com/rss?q=${q}&l=${loc}`;
+    const feed = await fetchAndParseRss(rssUrl, 'Indeed RSS');
+    if (!feed || !Array.isArray(feed.items) || feed.items.length === 0) return [];
 
     const jobs = feed.items.map(item => {
       const budgetMatch = item.contentSnippet?.match(/\$[\d,]+/);
@@ -437,32 +506,38 @@ async function scrapeIndeedRSS(keyword = 'web development', location = '') {
 // Insert jobs into database (ignore duplicates)
 function insertJobs(jobs) {
   return new Promise((resolve) => {
+    if (!jobs || jobs.length === 0) return resolve(0);
+
     let inserted = 0;
+    let pending = jobs.length;
 
     jobs.forEach((job) => {
-      db.run(`
-        INSERT OR IGNORE INTO jobs 
+      db.run(
+        `
+        INSERT OR IGNORE INTO jobs
         (external_id, title, description, budget, platform, job_type, difficulty, url, posted_date, ai_confidence, estimated_time)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        job.external_id,
-        job.title,
-        job.description,
-        job.budget,
-        job.platform,
-        job.job_type,
-        job.difficulty,
-        job.url,
-        job.posted_date,
-        job.ai_confidence,
-        job.estimated_time || '2-4 hours'
-      ], function (err) {
-        if (!err && this.changes > 0) inserted++;
-      });
+      `,
+        [
+          job.external_id,
+          job.title,
+          job.description,
+          job.budget,
+          job.platform,
+          job.job_type,
+          job.difficulty,
+          job.url,
+          job.posted_date,
+          job.ai_confidence,
+          job.estimated_time || '2-4 hours'
+        ],
+        function (err) {
+          if (!err && this.changes > 0) inserted++;
+          pending--;
+          if (pending === 0) resolve(inserted);
+        }
+      );
     });
-
-    // small delay to allow inserts to finish
-    setTimeout(() => resolve(inserted), 300);
   });
 }
 
@@ -670,11 +745,19 @@ app.post('/api/scrape', async (req, res) => {
     const tasks = searchTerms.map(async (keyword) => {
       try {
         if (source === 'indeed') {
+          // Prefer the optional scraper service if configured (more robust than direct RSS in some environments)
+          if (PY_SCRAPER_BASE_URL && !PY_SCRAPER_BASE_URL.includes('localhost')) {
+            return await scrapePythonService(keyword, location);
+          }
           return await scrapeIndeedRSS(keyword, location);
+        } else if (source === 'python' || source === 'scraper') {
+          return await scrapePythonService(keyword, location);
         } else if (source === 'both') {
           const [up, indd] = await Promise.allSettled([
             scrapeUpworkRSS(keyword),
-            scrapeIndeedRSS(keyword, location)
+            (PY_SCRAPER_BASE_URL && !PY_SCRAPER_BASE_URL.includes('localhost')
+              ? scrapePythonService(keyword, location)
+              : scrapeIndeedRSS(keyword, location))
           ]);
           const upJobs = up.status === 'fulfilled' ? up.value : [];
           const inJobs = indd.status === 'fulfilled' ? indd.value : [];
@@ -982,10 +1065,13 @@ async function runAutoScrape() {
   let all = [];
 
   for (const keyword of DEFAULT_KEYWORDS) {
-    // Try RSS feeds (Python service not available on Railway)
+    // Try RSS feeds; if an external scraper service is configured, prefer it for Indeed.
     const [upworkJobs, indeedJobs] = await Promise.all([
       scrapeUpworkRSS(keyword).catch(e => { log('warn', 'Upwork scrape error', { message: e.message }); return []; }),
-      scrapeIndeedRSS(keyword).catch(e => { log('warn', 'Indeed scrape error', { message: e.message }); return []; })
+      (PY_SCRAPER_BASE_URL
+        ? scrapePythonService(keyword)
+        : scrapeIndeedRSS(keyword)
+      ).catch(e => { log('warn', 'Indeed scrape error', { message: e.message }); return []; })
     ]);
     all = all.concat(upworkJobs, indeedJobs);
 
@@ -1267,7 +1353,11 @@ app.get('/api/automation-status', (req, res) => {
       scrapeIntervalMinutes: SCRAPE_INTERVAL_MINUTES,
       minConfidence: DEFAULT_MIN_CONFIDENCE,
       budgetRange: { min: DEFAULT_MIN_BUDGET, max: DEFAULT_MAX_BUDGET },
-      defaultKeywords: DEFAULT_KEYWORDS
+      defaultKeywords: DEFAULT_KEYWORDS,
+      pythonScraper: {
+        configured: Boolean(PY_SCRAPER_BASE_URL),
+        baseUrl: PY_SCRAPER_BASE_URL
+      }
     }
   });
 });
