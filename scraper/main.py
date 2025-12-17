@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import RedirectResponse
 import httpx
 import feedparser
 from bs4 import BeautifulSoup
@@ -11,6 +12,27 @@ app = FastAPI(title="NNIT Job Scraper")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("nnit-scraper")
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return {
+        "status": "ok",
+        "service": "nnit-scraper",
+        "docs": "/docs",
+        "openapi": "/openapi.json",
+        "examples": {
+            "search": "/jobs/search?q=python",
+            "indeed": "/jobs/indeed?q=python",
+        },
+    }
+
+
+@app.get("/docs (FastAPI docs)", include_in_schema=False)
+async def docs_redirect():
+    # Some UIs/users copy the label "docs (FastAPI docs)" into the URL.
+    # Redirect that mistaken path to the real docs endpoint.
+    return RedirectResponse(url="/docs")
 
 class Job(BaseModel):
     title: str
