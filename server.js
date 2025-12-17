@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const Parser = require('rss-parser');
+const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { OpenAI } = require('openai');
@@ -188,8 +189,23 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) {
 if (!process.env.STRIPE_SECRET_KEY) log('error', 'Warning: STRIPE_SECRET_KEY not set — Stripe payments disabled or will error if used.');
 if (!process.env.OPENAI_API_KEY) log('error', 'Warning: OPENAI_API_KEY not set — AI proposal generation will use fallback templates.');
 
-// Database Setup - prefer persistent path on Railway
-const dbPath = process.env.DATABASE_PATH || (process.env.RAILWAY_ENVIRONMENT ? '/data/app.db' : './freelance.db');
+// Database Setup
+// - Prefer persistence on Railway if a writable /data exists
+// - Fall back to :memory: if filesystem is not writable (prevents 502 from crash-loop)
+function resolveDbPath() {
+  if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH;
+  if (!process.env.RAILWAY_ENVIRONMENT) return './freelance.db';
+  const candidate = '/data/app.db';
+  try {
+    fs.mkdirSync('/data', { recursive: true });
+    return candidate;
+  } catch (e) {
+    log('warn', 'Persistent DB path unavailable; falling back to :memory:', { message: e.message });
+    return ':memory:';
+  }
+}
+
+const dbPath = resolveDbPath();
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     log('error', 'Database error', { error: err && err.message ? err.message : String(err) });
@@ -246,6 +262,9 @@ function initDatabase() {
     )
   `);
 
+  // Migration: older DBs may not have auto_scrape
+  db.run('ALTER TABLE settings ADD COLUMN auto_scrape BOOLEAN DEFAULT 0', () => {});
+
   // Insert default settings if not exists
   db.run(`
     INSERT OR IGNORE INTO settings (id, auto_apply, min_budget, max_budget)
@@ -254,13 +273,16 @@ function initDatabase() {
 
   log('info', 'Database initialized');
 
-  // Load automation flags from settings (prefer settings over env if set)
+  // Load automation flags from settings (prefer explicit 0/1 over env defaults)
   db.get('SELECT auto_apply, auto_scrape FROM settings WHERE id = 1', [], (err, row) => {
-    if (!err && row) {
-      if (row.auto_apply !== null && row.auto_apply !== undefined) state.autoApply = !!row.auto_apply || state.autoApply;
-      if (row.auto_scrape !== null && row.auto_scrape !== undefined) state.autoScrape = !!row.auto_scrape || state.autoScrape;
-      log('info', 'Automation flags loaded', { autoApply: state.autoApply, autoScrape: state.autoScrape });
+    if (err) {
+      log('warn', 'Failed to load automation flags from settings', { message: err.message });
+      return;
     }
+    if (!row) return;
+    if (row.auto_apply === 0 || row.auto_apply === 1) state.autoApply = row.auto_apply === 1;
+    if (row.auto_scrape === 0 || row.auto_scrape === 1) state.autoScrape = row.auto_scrape === 1;
+    log('info', 'Automation flags loaded', { autoApply: state.autoApply, autoScrape: state.autoScrape });
   });
 }
 
