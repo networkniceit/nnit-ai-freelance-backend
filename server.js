@@ -53,7 +53,7 @@ if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'your_str
 
 // Runtime configuration via env (with sane defaults)
 // Bind explicitly to 0.0.0.0 for container platforms (Railway, Docker)
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || (process.env.RAILWAY_ENVIRONMENT ? 8080 : 5000);
 const HOST = process.env.HOST || '0.0.0.0';
 const SCRAPE_INTERVAL_MINUTES = Number(process.env.SCRAPE_INTERVAL || 30);
 const AUTO_APPLY_ENABLED = process.env.AUTO_APPLY === 'true';
