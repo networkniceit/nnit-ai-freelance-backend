@@ -52,7 +52,9 @@ if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'your_str
 }
 
 // Runtime configuration via env (with sane defaults)
+// Bind explicitly to 0.0.0.0 for container platforms (Railway, Docker)
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
 const SCRAPE_INTERVAL_MINUTES = Number(process.env.SCRAPE_INTERVAL || 30);
 const AUTO_APPLY_ENABLED = process.env.AUTO_APPLY === 'true';
 // Auto-scrape toggle: default disabled on Railway to reduce noise unless explicitly enabled
@@ -1083,10 +1085,11 @@ function stopAutoApply() {
 }
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, HOST, () => {
   // Single concise startup entry for clean production logs
   log('info', 'Service started', {
     server: `http://localhost:${PORT}`,
+    bind: { host: HOST, port: PORT },
     endpoints: [
       'GET /api/health',
       'GET /api/jobs',
@@ -1122,6 +1125,17 @@ app.listen(PORT, () => {
   } else {
     if (state.autoApply) startAutoApply();
   }
+});
+
+server.on('error', (err) => {
+  // Common on platforms that accidentally start two processes or when PORT is wrong
+  log('error', 'HTTP server failed to start', {
+    code: err && err.code,
+    message: err && err.message,
+    stack: err && err.stack
+  });
+  // Exit non-zero so the platform restarts with a clear reason in logs
+  process.exit(1);
 });
 
 // ============================================
@@ -1321,18 +1335,32 @@ app.get(/^\/(?!api|webhook).*/, (req, res, next) => {
 // (Webhook route moved above express.json to preserve raw body)
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  log('info', 'Shutting down...');
-  clearInterval(autoScrapeInterval);
-  clearInterval(autoApplyInterval);
-  db.close();
-  process.exit(0);
-});
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
 
-process.on('SIGTERM', () => {
-  log('info', 'Shutting down (SIGTERM)...');
+  log('info', `Shutting down (${signal})...`);
   clearInterval(autoScrapeInterval);
   clearInterval(autoApplyInterval);
-  db.close();
-  process.exit(0);
-});
+
+  // Stop accepting new connections; close DB; then exit.
+  try {
+    server.close(() => {
+      db.close((err) => {
+        if (err) log('warn', 'DB close warning', { message: err.message });
+        process.exit(0);
+      });
+    });
+  } catch (e) {
+    log('warn', 'Shutdown sequence warning', { message: e && e.message ? e.message : String(e) });
+    try {
+      db.close(() => process.exit(0));
+    } catch (_) {
+      process.exit(0);
+    }
+  }
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
