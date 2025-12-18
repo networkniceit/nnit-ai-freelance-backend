@@ -340,6 +340,14 @@ async function initDatabase() {
   } catch (e) {
     log('warn', 'Failed to load automation flags from settings', { message: e && e.message ? e.message : String(e) });
   }
+
+  // If settings enable automation after boot, ensure the schedulers are running.
+  // This makes automation robust even when DB init completes after server listen.
+  try {
+    ensureAutomationSchedulers();
+  } catch (e) {
+    log('warn', 'Failed to ensure automation schedulers', { message: e && e.message ? e.message : String(e) });
+  }
 }
 
 // ============================================
@@ -1138,8 +1146,12 @@ async function runAutoApply() {
     for (const job of rows) {
       // Budget filter (basic numeric parse)
       const budgetValue = parseInt(String(job.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
-      if (budgetValue > 0 && (budgetValue < DEFAULT_MIN_BUDGET || budgetValue > DEFAULT_MAX_BUDGET)) {
-        log('info', 'Skipping job - budget out of range', { title: job.title, budget: budgetValue });
+      // Only enforce budget range for freelance-style platforms. Salary-like platforms (e.g. Remotive)
+      // often include large annual compensation numbers that should not block automation.
+      const platform = String(job.platform || '').toLowerCase();
+      const isFreelanceBudget = platform === 'upwork' || platform === 'fiverr' || platform === 'freelancer';
+      if (isFreelanceBudget && budgetValue > 0 && (budgetValue < DEFAULT_MIN_BUDGET || budgetValue > DEFAULT_MAX_BUDGET)) {
+        log('info', 'Skipping job - budget out of range', { title: job.title, budget: budgetValue, platform: job.platform });
         continue;
       }
 
@@ -1184,6 +1196,18 @@ function stopAutoScrape() {
 function stopAutoApply() {
   if (autoApplyInterval) clearInterval(autoApplyInterval);
   autoApplyInterval = undefined;
+}
+
+function ensureAutomationSchedulers() {
+  // Start schedulers if state indicates they should be enabled.
+  // No-op if already running.
+  if (state.autoScrape) {
+    if (!autoScrapeInterval) startAutoScrape();
+    setImmediate(() => runAutoScrape().catch(e => log('error', 'Immediate auto-scrape failed', { message: e.message })));
+  }
+  if (state.autoApply) {
+    if (!autoApplyInterval) startAutoApply();
+  }
 }
 
 // Start server
