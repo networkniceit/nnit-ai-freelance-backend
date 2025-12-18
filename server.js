@@ -614,8 +614,58 @@ function calculateAIConfidence(title, description) {
 // AI PROPOSAL GENERATION
 // ============================================
 
+function buildProposalProfile(jobTitle, jobDescription) {
+  const title = String(jobTitle || '').trim();
+  const desc = String(jobDescription || '').trim();
+  const text = `${title} ${desc}`.toLowerCase();
+
+  const has = (re) => re.test(text);
+
+  // Keep these intentionally broad; we only need enough to avoid obvious mismatches.
+  if (has(/\b(devops|site reliability|sre|aws|terraform|cloudformation|kubernetes|k8s|docker|ci\/?cd|jenkins|github actions)\b/)) {
+    return {
+      label: 'DevOps / Cloud',
+      skills: ['AWS', 'Docker/Kubernetes', 'Terraform/IaC', 'CI/CD', 'Monitoring & logging'],
+      question: 'What is the current infrastructure setup (AWS services + IaC tool) and your top 1–2 priorities for the first week?'
+    };
+  }
+
+  if (has(/\b(copywriter|copywriting|content writer|blog|seo|landing page|newsletter|editor|ghostwriter)\b/)) {
+    return {
+      label: 'Copywriting / Content',
+      skills: ['SEO content writing', 'Landing-page copy', 'Research & outlining', 'Editing & tone matching', 'Fast iteration'],
+      question: 'Do you have a preferred tone + examples (links) of content you like, and what’s the primary KPI (traffic, conversions, signups)?'
+    };
+  }
+
+  if (has(/\b(react native|ios|android|mobile app|app store|play store|expo)\b/)) {
+    return {
+      label: 'Mobile',
+      skills: ['React Native', 'Performance tuning', 'Crash/debug triage', 'Release readiness', 'Clean refactors'],
+      question: 'What are the top issues right now (crashes, slow screens, specific flows) and do you have logs/Crashlytics set up?'
+    };
+  }
+
+  if (has(/\b(data entry|excel|google sheets|spreadsheet|csv|scrape|scraping|lead list|crm)\b/)) {
+    return {
+      label: 'Data / Ops',
+      skills: ['Data entry', 'Excel/Sheets', 'Data cleaning', 'CSV processing', 'Light automation'],
+      question: 'What format do you want the final delivery in (CSV/Sheets/CRM) and are there validation rules I should enforce?'
+    };
+  }
+
+  // Default: software/web
+  return {
+    label: 'Software Development',
+    skills: ['React', 'Node.js', 'Python', 'APIs', 'Clean, maintainable code'],
+    question: 'What are the exact deliverables (features + acceptance criteria) and do you have a preferred timeline?'
+  };
+}
+
 async function generateProposal(jobTitle, jobDescription, jobBudget) {
   const t0 = Date.now();
+  const profile = buildProposalProfile(jobTitle, jobDescription);
+
   // Check if we have a real OpenAI key
   const hasRealKey = process.env.OPENAI_API_KEY &&
     process.env.OPENAI_API_KEY !== 'demo-mode' &&
@@ -623,7 +673,12 @@ async function generateProposal(jobTitle, jobDescription, jobBudget) {
 
   if (hasRealKey) {
     try {
-      const prompt = `Write a professional, winning Upwork proposal for this job. Make it personal, specific, and under 150 words.
+      const prompt = `Write a concise, high-signal proposal message for a freelance job application. Keep it personal, specific, and under 140 words.
+
+Do NOT claim specific projects or clients unless they are mentioned in the job description. Avoid generic fluff.
+
+Target profile: ${profile.label}
+Suggested skills to reference (pick the most relevant 2-4): ${profile.skills.join(', ')}
 
 JOB TITLE: ${jobTitle}
 
@@ -633,12 +688,12 @@ BUDGET: ${jobBudget}
 
 Requirements for the proposal:
 - Address the client professionally
-- Show you understand their specific needs
-- Mention relevant skills (React, Node.js, Python, data entry, etc.)
-- Ask one smart question about their requirements
-- Mention quick delivery time
+- Show you understand the work in 1 sentence
+- Include 3 short checkmark bullets (capabilities/approach) relevant to the job
+- Ask exactly one smart question
+- Mention quick turnaround and clear communication
 - Keep it friendly and confident
-- End with "NetworkNiceIT Tec" as signature
+- End with "NetworkNiceIT Tec" as the signature
 
 Write only the proposal text, nothing else.`;
 
@@ -659,27 +714,17 @@ Write only the proposal text, nothing else.`;
   }
 
   // Fallback proposal template (works without OpenAI)
-  const techKeywords = jobDescription.toLowerCase().includes('python') ? 'Python' :
-    jobDescription.toLowerCase().includes('react') ? 'React & JavaScript' :
-      jobDescription.toLowerCase().includes('node') ? 'Node.js' :
-        jobDescription.toLowerCase().includes('data') ? 'data processing' :
-          'web development';
-
   const fallback = `Hi,
 
-I can complete your "${jobTitle}" with high quality and fast delivery.
+I can help with your "${jobTitle}" and start immediately.
 
-✅ Experience with ${techKeywords} and full-stack development
-✅ Clean, well-documented code
-✅ Clear communication throughout
-✅ Fast turnaround time
-✅ Unlimited revisions included
+✅ ${profile.skills[0]}
+✅ ${profile.skills[1]}
+✅ ${profile.skills[2]}
 
-I've built similar projects including the NNIT Platform (full-stack application with React, Node.js, and PostgreSQL). I understand your requirements and can deliver exactly what you need.
+I’ll keep communication clear and move fast, with a first update within 24 hours.
 
-Quick question: ${jobDescription.toLowerCase().includes('deadline') ? 'What is your preferred timeline?' : 'Do you have any specific requirements for the deliverables?'}
-
-Available to start immediately!
+Quick question: ${profile.question}
 
 Best regards,
 NetworkNiceIT Tec`;
