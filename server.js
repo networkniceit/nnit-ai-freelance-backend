@@ -66,7 +66,17 @@ const AUTO_SCRAPE_ENABLED = (() => {
 const DEFAULT_MIN_BUDGET = Number(process.env.DEFAULT_MIN_BUDGET || 100);
 const DEFAULT_MAX_BUDGET = Number(process.env.DEFAULT_MAX_BUDGET || 5000);
 const DEFAULT_MIN_CONFIDENCE = Number(process.env.DEFAULT_MIN_CONFIDENCE || 85);
-const PROPOSAL_SIGNATURE = String(process.env.PROPOSAL_SIGNATURE || 'NetworkNiceIT Tec').trim();
+function parseMultilineEnv(value) {
+  // Railway/env UIs often store newlines as literal "\n".
+  // Convert common escapes into real characters.
+  return String(value || '')
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .trim();
+}
+
+const PROPOSAL_SIGNATURE = parseMultilineEnv(process.env.PROPOSAL_SIGNATURE || 'NetworkNiceIT Tec');
 const PROPOSAL_FIRST_UPDATE_HOURS = Number(process.env.PROPOSAL_FIRST_UPDATE_HOURS || 24);
 const DEFAULT_KEYWORDS = (process.env.DEFAULT_KEYWORDS || 'web development,python script,react,nodejs,data entry,automation')
   .split(',')
