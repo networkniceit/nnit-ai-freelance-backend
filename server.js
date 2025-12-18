@@ -66,6 +66,8 @@ const AUTO_SCRAPE_ENABLED = (() => {
 const DEFAULT_MIN_BUDGET = Number(process.env.DEFAULT_MIN_BUDGET || 100);
 const DEFAULT_MAX_BUDGET = Number(process.env.DEFAULT_MAX_BUDGET || 5000);
 const DEFAULT_MIN_CONFIDENCE = Number(process.env.DEFAULT_MIN_CONFIDENCE || 85);
+const PROPOSAL_SIGNATURE = String(process.env.PROPOSAL_SIGNATURE || 'NetworkNiceIT Tec').trim();
+const PROPOSAL_FIRST_UPDATE_HOURS = Number(process.env.PROPOSAL_FIRST_UPDATE_HOURS || 24);
 const DEFAULT_KEYWORDS = (process.env.DEFAULT_KEYWORDS || 'web development,python script,react,nodejs,data entry,automation')
   .split(',')
   .map(k => k.trim())
@@ -693,7 +695,7 @@ Requirements for the proposal:
 - Ask exactly one smart question
 - Mention quick turnaround and clear communication
 - Keep it friendly and confident
-- End with "NetworkNiceIT Tec" as the signature
+- End with "${PROPOSAL_SIGNATURE}" as the signature
 
 Write only the proposal text, nothing else.`;
 
@@ -722,12 +724,12 @@ I can help with your "${jobTitle}" and start immediately.
 ✅ ${profile.skills[1]}
 ✅ ${profile.skills[2]}
 
-I’ll keep communication clear and move fast, with a first update within 24 hours.
+I’ll keep communication clear and move fast, with a first update within ${Number.isFinite(PROPOSAL_FIRST_UPDATE_HOURS) ? PROPOSAL_FIRST_UPDATE_HOURS : 24} hours.
 
 Quick question: ${profile.question}
 
 Best regards,
-NetworkNiceIT Tec`;
+${PROPOSAL_SIGNATURE}`;
   metrics.timings.proposalMs.push(Date.now() - t0);
   return fallback;
 }
