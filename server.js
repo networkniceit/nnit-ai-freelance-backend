@@ -622,6 +622,15 @@ function calculateAIConfidence(title, description) {
   return Math.min(Math.max(score, 50), 99); // Keep between 50-99
 }
 
+// Calculate Upwork fee: 10% of budget, minimum 1 unit (e.g., $1)
+function calculateUpworkFee(budget) {
+  // budget: string like "$100" or "100"
+  const value = parseFloat(String(budget).replace(/[^0-9.]/g, ''));
+  if (!value || isNaN(value)) return 1;
+  const fee = value * 0.10;
+  return fee < 1 ? 1 : Math.round(fee * 100) / 100; // round to 2 decimals
+}
+
 // ============================================
 // AI PROPOSAL GENERATION
 // ============================================
@@ -910,11 +919,18 @@ app.post('/api/apply', async (req, res) => {
       const proposal = custom_proposal || await generateProposal(job.title, job.description, job.budget);
       metrics.proposalsGenerated++;
 
-      // Create application
+      // Calculate Upwork fee if platform is Upwork
+      let fee = null;
+      if (String(job.platform).toLowerCase() === 'upwork') {
+        fee = calculateUpworkFee(job.budget);
+      }
+
+      // Create application (store fee in earnings field if Upwork, else just budget)
+      const earnings = fee !== null ? `${job.budget} (Upwork fee: $${fee})` : job.budget;
       db.run(`
         INSERT INTO applications (job_id, proposal, status, earnings)
         VALUES (?, ?, 'pending', ?)
-      `, [job_id, proposal, job.budget], function (err) {
+      `, [job_id, proposal, earnings], function (err) {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
@@ -922,11 +938,12 @@ app.post('/api/apply', async (req, res) => {
         // Update job status
         db.run('UPDATE jobs SET status = ? WHERE id = ?', ['applied', job.id]);
         metrics.applicationsCreated++;
-        log('info', 'Application created', { jobId: job.id, title: job.title, confidence: job.ai_confidence, budget: job.budget });
+        log('info', 'Application created', { jobId: job.id, title: job.title, confidence: job.ai_confidence, budget: job.budget, upworkFee: fee });
         res.json({
           success: true,
           application_id: this.lastID,
           proposal: proposal,
+          upwork_fee: fee,
           message: `Applied to: ${job.title}`
         });
       });
@@ -1551,3 +1568,107 @@ function shutdown(signal) {
 
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+// Start the Python scraper service (if not already running)
+// This assumes the FastAPI service is in a sibling directory called "scraper".
+// Adjust the path as needed for your project structure.
+const { exec } = require('child_process');
+const pathToService = path.join(__dirname, '../scraper');
+const serviceReadyFile = path.join(pathToService, 'ready.txt');
+
+// Check if the service is already running (simple TCP check)
+function isServiceRunning(host, port) {
+  return new Promise((resolve) => {
+    const net = require('net');
+    const socket = new net.Socket();
+    let isRunning = false;
+
+    socket.setTimeout(2000);
+    socket.on('connect', () => {
+      isRunning = true;
+      socket.destroy();
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+    });
+    socket.on('error', () => {
+      socket.destroy();
+    });
+
+    socket.connect(port, host, () => {
+      resolve(true);
+    });
+
+    setTimeout(() => {
+      resolve(isRunning);
+    }, 2500);
+  });
+}
+
+// Wait for the Python service to be ready (check for a specific file or endpoint)
+async function waitForServiceReady() {
+  const timeout = Date.now() + 30000; // 30 seconds from now
+  let ready = false;
+
+  while (Date.now() < timeout && !ready) {
+    try {
+      // Check for the presence of the ready file
+      const exists = fs.existsSync(serviceReadyFile);
+      if (exists) {
+        ready = true;
+        log('info', 'Python scraper service is ready');
+      }
+    } catch (e) {
+      log('warn', 'Error checking Python service readiness', { message: e.message });
+    }
+
+    // Wait a bit before checking again
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  return ready;
+}
+
+// Start the Python service
+async function startPythonService() {
+  // Check if the service is already running
+  const isRunning = await isServiceRunning('127.0.0.1', 8000);
+  if (isRunning) {
+    log('info', 'Python scraper service is already running');
+    return true;
+  }
+
+  log('info', 'Starting Python scraper service...');
+
+  // Command to activate the virtual environment and start the FastAPI service
+  const command = `cd ${pathToService} && .venv\\Scripts\\activate && uvicorn main:app --host 127.0.0.1 --port 8000`;
+
+  // Start the service using child_process
+  exec(command, { shell: true }, (error, stdout, stderr) => {
+    if (error) {
+      log('error', 'Failed to start Python scraper service', { message: error.message });
+      return;
+    }
+    log('info', 'Python scraper service started', { stdout, stderr });
+  });
+
+  // Wait for the service to be ready
+  return waitForServiceReady();
+}
+
+// ============================================
+// STARTUP SEQUENCE
+// ============================================
+
+// Start the Python scraper service first (if configured)
+if (PY_SCRAPER_BASE_URL) {
+  log('info', 'Python scraper service URL:', { url: PY_SCRAPER_BASE_URL });
+  startPythonService().catch(err => {
+    log('error', 'Failed to start Python scraper service', { message: err.message });
+  });
+}
+
+// Start the main server
+server.listen(PORT, HOST, () => {
+  log('info', 'Main server started', { host: HOST, port: PORT });
+});
