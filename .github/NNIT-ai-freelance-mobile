@@ -1,0 +1,37 @@
+import React, { useState } from 'react';
+import { View, Text, Switch, Button, Alert } from 'react-native';
+
+const BACKEND_URL = 'https://nnit-ai-freelance-backend-production.up.railway.app'; // Change to your backend
+
+export default function AutomationToggle() {
+    const [autoScrape, setAutoScrape] = useState(false);
+    const [autoApply, setAutoApply] = useState(false);
+
+    const updateAutomation = async () => {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ autoScrape, autoApply }),
+            });
+            if (res.ok) {
+                Alert.alert('Success', 'Automation settings updated!');
+            } else {
+                Alert.alert('Error', 'Failed to update settings');
+            }
+        } catch (e) {
+            Alert.alert('Error', e.message);
+        }
+    };
+
+    return (
+        <View style= {{ padding: 20 }
+}>
+    <Text>Auto Scrape </Text>
+        < Switch value = { autoScrape } onValueChange = { setAutoScrape } />
+            <Text>Auto Apply </Text>
+                < Switch value = { autoApply } onValueChange = { setAutoApply } />
+                    <Button title="Save" onPress = { updateAutomation } />
+                        </View>
+    );
+}
