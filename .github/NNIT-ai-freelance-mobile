@@ -1,4 +1,6 @@
+// @ts-ignore
 import React, { useState } from 'react';
+// @ts-ignore
 import { View, Text, Switch, Button, Alert } from 'react-native';
 
 const BACKEND_URL = 'https://nnit-ai-freelance-backend-production.up.railway.app'; // Change to your backend
@@ -20,18 +22,21 @@ export default function AutomationToggle() {
                 Alert.alert('Error', 'Failed to update settings');
             }
         } catch (e) {
-            Alert.alert('Error', e.message);
+            let message = 'Unknown error';
+            if (e instanceof Error) {
+                message = e.message;
+            }
+            Alert.alert('Error', message);
         }
     };
 
     return (
-        <View style= {{ padding: 20 }
-}>
-    <Text>Auto Scrape </Text>
-        < Switch value = { autoScrape } onValueChange = { setAutoScrape } />
-            <Text>Auto Apply </Text>
-                < Switch value = { autoApply } onValueChange = { setAutoApply } />
-                    <Button title="Save" onPress = { updateAutomation } />
-                        </View>
+        React.createElement(View, { style: { padding: 20 } },
+            React.createElement(Text, null, 'Auto Scrape'),
+            React.createElement(Switch, { value: autoScrape, onValueChange: setAutoScrape }),
+            React.createElement(Text, null, 'Auto Apply'),
+            React.createElement(Switch, { value: autoApply, onValueChange: setAutoApply }),
+            React.createElement(Button, { title: 'Save', onPress: updateAutomation })
+        )
     );
 }
