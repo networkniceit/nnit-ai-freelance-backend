@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Payment Successful - NNIT AI Freelancer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .logo {
+            margin-bottom: 20px;
+            font-size: 32px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .checkmark {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #4caf50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .company {
+            color: #667eea;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .service {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .session-id {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .session-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .details {
+            text-align: left;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .detail-value {
+            color: #666;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">NNIT</div>
+        <div class="checkmark">✓</div>
+
+        <h1>Payment Successful!</h1>
+        <div class="company">Network Nice IT Tec</div>
+        <div class="service">Service: NNIT AI Freelancer</div>
+
+        <div class="details">
+            <div class="detail-row">
+                <span class="detail-label">Transaction Status:</span>
+                <span class="detail-value">✓ Complete</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Session ID:</span>
+                <span class="detail-value" id="sessionId">Loading...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Timestamp:</span>
+                <span class="detail-value" id="timestamp">Loading...</span>
+            </div>
+        </div>
+
+        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">
+            Thank you for using NNIT AI Freelancer! Your payment has been processed successfully. You should receive a
+            confirmation email shortly.
+        </p>
+
+        <div class="buttons">
+            <button class="btn-primary" onclick="window.location.href='/'">Back to Dashboard</button>
+            <button class="btn-secondary" onclick="downloadReceipt()">Download Receipt</button>
+        </div>
+
+        <div class="footer">
+            © 2025 Network Nice IT Tec. All rights reserved. | NNIT AI Freelancer Platform
+        </div>
+    </div>
+
+    <script>
+        // Get session ID from URL
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get('session_id') || 'N/A';
+        document.getElementById('sessionId').textContent = sessionId;
+
+        // Set timestamp
+        const now = new Date();
+        document.getElementById('timestamp').textContent = now.toLocaleString();
+
+        // Download receipt function
+        function downloadReceipt() {
+            const receipt = `
+RECEIPT
+=======
+Network Nice IT Tec
+NNIT AI Freelancer Platform
+
+Session ID: ${sessionId}
+Date: ${now.toLocaleString()}
+Status: Payment Complete
+
+Thank you for your business!
+      `;
+
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(receipt));
+            element.setAttribute('download', `receipt_${sessionId}.txt`);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+    </script>
+</body>
+
+</html>
