@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>API Test Frontend</title>
+</head>
+<body>
+  <h1>Test Advanced Audit Export</h1>
+  <form id="loginForm" onsubmit="login(event)">
+    <label>Email: <input type="email" id="email" required></label><br>
+    <label>Password: <input type="password" id="password" required></label><br>
+    <button type="submit">Login</button>
+  </form>
+  <div id="loginStatus"></div>
+  <button id="exportBtn" onclick="startExport()" style="display:none;">Start Export</button>
+  <pre id="result"></pre>
+  <script>
+    let jwtToken = '';
+    async function login(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const response = await fetch('http://127.0.0.1:3003/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      if (data.token) {
+        jwtToken = data.token;
+        document.getElementById('loginStatus').textContent = 'Login successful!';
+        document.getElementById('exportBtn').style.display = 'inline-block';
+      } else {
+        document.getElementById('loginStatus').textContent = 'Login failed: ' + (data.message || 'Unknown error');
+      }
+    }
+    async function startExport() {
+      if (!jwtToken) {
+        document.getElementById('loginStatus').textContent = 'Please log in first.';
+        return;
+      }
+      const response = await fetch('http://127.0.0.1:3003/api/advancedAuditExport', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + jwtToken
+        },
+        body: JSON.stringify({
+          filters: { /* your filters here */ },
+          format: 'csv'
+        })
+      });
+      const data = await response.json();
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>

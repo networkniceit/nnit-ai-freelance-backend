@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NNIT Free Frontend</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:24px}
+    .card{border:1px solid #ddd;padding:16px;border-radius:8px;max-width:720px}
+    input,button{padding:8px;margin:6px 0;display:block}
+    #messages{white-space:pre-wrap;margin-top:12px;background:#f7f7f7;padding:8px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <h1>NNIT Free Frontend</h1>
+  <div class="card">
+    <h3>Auth</h3>
+    <input id="email" placeholder="email" />
+    <input id="password" placeholder="password" type="password" />
+    <button id="btn-login">Login</button>
+    <button id="btn-register">Register</button>
+    <button id="btn-profile">Get Profile</button>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3>Notifications & Audit</h3>
+    <button id="btn-notifs">Load Notifications</button>
+    <button id="btn-audit">Load Audit Logs</button>
+    <div id="messages">No output yet.</div>
+  </div>
+
+  <script src="./api.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

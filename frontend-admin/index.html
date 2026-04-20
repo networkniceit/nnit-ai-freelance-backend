@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Master Admin Dashboard</title>
+</head>
+<body>
+  <h1>Master Admin Dashboard</h1>
+  <p><a href="/standalone/dashboard/">Open Dashboard</a> | <a href="/standalone/notifications/">Notifications</a> | <a href="/standalone/advancedBilling/">Billing</a></p>
+  <div>
+    <label for="adminToken">Admin JWT (paste for secure calls):</label><br>
+    <input id="adminToken" placeholder="eyJ..." style="width:100%" />
+    <button id="setToken">Set Token</button>
+    <button id="useDev">Use Dev Summary</button>
+    <button id="mockIncome">Mock Income</button>
+    <button id="mockTransactions">Mock Transactions</button>
+    <button id="mockAudit">Mock Audit</button>
+  </div>
+  <div id="status">Loading summary...</div>
+  <div id="summary"></div>
+  <script src="app.js"></script>
+</body>
+</html>
