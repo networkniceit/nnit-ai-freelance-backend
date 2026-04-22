@@ -13,6 +13,7 @@ const app = express();
 // ==================== MIDDLEWARE SETUP ====================
 
 // Body parsers
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -261,8 +262,7 @@ app.use((err, req, res, next) => {
 
 // ==================== SERVER STARTUP ====================
 
-const PORT = process.env.PORT || 8080;
-
+const PORT = process.env.PORT || 8080; 
 const startServer = async () => {
   try {
     // Attempt to connect to MongoDB but do not abort startup on failure
