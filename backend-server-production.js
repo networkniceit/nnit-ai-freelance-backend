@@ -271,8 +271,6 @@ const startServer = async () => {
     });
 
     console.log('PostgreSQL URL:', process.env.POSTGRES_URL ? 'SET' : 'NOT SET');
-try {
-  await pgPool.query('SELECT NOW()');
     try {
       await pgPool.query('SELECT NOW()');
       logger.info('✅ PostgreSQL connected');
@@ -295,8 +293,7 @@ try {
   } catch (error) {
     logger.error('Failed to start server', error);
     process.exit(1);
-  }
-};
+ }; 
 
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
