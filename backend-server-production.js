@@ -270,6 +270,9 @@ const startServer = async () => {
       logger.warn('MongoDB connection failed during startup; continuing without DB', err && err.message ? err.message : err);
     });
 
+    console.log('PostgreSQL URL:', process.env.POSTGRES_URL ? 'SET' : 'NOT SET');
+try {
+  await pgPool.query('SELECT NOW()');
     try {
       await pgPool.query('SELECT NOW()');
       logger.info('✅ PostgreSQL connected');
