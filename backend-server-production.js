@@ -22,7 +22,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // PostgreSQL Connection Pool (create before importing controllers)
 const pgPool = new Pool({
   connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
