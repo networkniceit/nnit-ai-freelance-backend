@@ -275,7 +275,7 @@ const startServer = async () => {
       await pgPool.query('SELECT NOW()');
       logger.info('✅ PostgreSQL connected');
     } catch (error) {
-      logger.warn('⚠️ PostgreSQL disabled or credentials invalid - audit logs and notifications unavailable');
+      logger.warn('⚠️ PostgreSQL connection failed: ' + error.message);
     }
 
     app.listen(PORT, () => {
