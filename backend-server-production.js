@@ -13,7 +13,7 @@ const app = express();
 // ==================== MIDDLEWARE SETUP ====================
 const helmet = require('helmet');
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: false,
     directives: {
       defaultSrc: ["'self'"],
       
