@@ -11,6 +11,7 @@ const fs = require('fs');
 const app = express();
 
 // ==================== MIDDLEWARE SETUP ====================
+const helmet = require('helmet');
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
