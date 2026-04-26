@@ -104,9 +104,10 @@ if (fs.existsSync(freeFrontendPath)) {
 // Serve standalone frontend at /standalone (completely separate)
 const standalonePath = path.join(__dirname, 'frontend-standalone');
 if (fs.existsSync(standalonePath)) {
-  app.use('/standalone', express.static(standalonePath));
-  app.get('/standalone', (req, res) => res.sendFile(path.join(standalonePath, 'index.html')));
-}
+ app.use('/standalone', (req, res, next) => {
+  res.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;");
+  next();
+}, express.static(standalonePath));
 
 // Serve admin aggregator at /admin when present
 const adminPath = path.join(__dirname, 'frontend-admin');
