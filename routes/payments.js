@@ -6,7 +6,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY); // Set your Stripe secret 
 const { authenticateJWT } = require('../middleware/authenticateJWT');
 
 // Withdraw endpoint
-router.post('/api/payments/withdraw', authenticateJWT, async (req, res) => {
+router.post('/withdraw', authenticateJWT, async (req, res) => {
     const { amount, currency, destination } = req.body;
     try {
         // Create a payout (to bank or card)
@@ -23,7 +23,7 @@ router.post('/api/payments/withdraw', authenticateJWT, async (req, res) => {
 
 
 // Create a Stripe Checkout session for subscription
-router.post('/api/payments/create-subscription-session', authenticateJWT, async (req, res) => {
+router.post('/create-subscription-session', authenticateJWT, async (req, res) => {
     try {
         const { priceId } = req.body;
         const session = await stripe.checkout.sessions.create({
@@ -42,7 +42,7 @@ router.post('/api/payments/create-subscription-session', authenticateJWT, async 
 });
 
 // Webhook endpoint for Stripe events
-router.post('/api/payments/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+router.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     const sig = req.headers['stripe-signature'];
     let event;
     try {
