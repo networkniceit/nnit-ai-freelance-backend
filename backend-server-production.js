@@ -11,6 +11,18 @@ const fs = require('fs');
 const app = express();
 
 // ==================== MIDDLEWARE SETUP ====================
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+    }
+  }
+})); 
 
 // Body parsers
 app.set('trust proxy', 1);
