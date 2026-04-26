@@ -10,21 +10,8 @@ const fs = require('fs');
 
 const app = express();
 
-// ==================== MIDDLEWARE SETUP ====================
 const helmet = require('helmet');
-app.use(helmet({
-  contentSecurityPolicy: false,
-    directives: {
-      defaultSrc: ["'self'"],
-      
-      scriptSrc: ["'self'", "'unsafe-inline'", "'sha256-POoy0dgxsJMqoytyvCiKF79LDXpObm0J7OCor4wrKcM='"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-    }
-  }
-})); 
+app.use(helmet({ contentSecurityPolicy: false }));
 
 // Body parsers
 app.set('trust proxy', 1);
