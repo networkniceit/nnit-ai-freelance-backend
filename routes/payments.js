@@ -31,8 +31,8 @@ router.post('/create-subscription-session', authenticateJWT, async (req, res) =>
             mode: 'subscription',
             line_items: [{ price: priceId, quantity: 1 }],
             customer_email: req.user.email,
-            success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL}/pricing`,
+            success_url: `${process.env.FRONTEND_URL}/standalone?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL}/standalone`,
         });
         res.json({ url: session.url });
     } catch (err) {
