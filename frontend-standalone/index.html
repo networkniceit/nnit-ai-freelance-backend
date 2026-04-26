@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -546,7 +546,7 @@
     }
 
     .plan-features li:last-child { border: none; }
-    .plan-features li::before { content: '✓'; color: var(--green); font-weight: 700; }
+    .plan-features li::before { content: '?'; color: var(--green); font-weight: 700; }
 
     /* PROFILE PANEL */
     .profile-panel {
@@ -751,7 +751,7 @@
 <!-- AUTH MODAL -->
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-box">
-    <button class="close-btn" onclick="closeAuth()">✕</button>
+    <button class="close-btn" onclick="closeAuth()">?</button>
     <h2 id="authTitle">Welcome back</h2>
     <p id="authSubtitle">Sign in to your NNIT account</p>
     <div class="auth-tabs">
@@ -765,7 +765,7 @@
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="authPassword" placeholder="••••••••" />
+        <input type="password" id="authPassword" placeholder="��������" />
       </div>
       <button class="btn btn-primary" onclick="doLogin()" id="loginBtn">Sign In</button>
     </div>
@@ -792,7 +792,7 @@
 
   <!-- HERO -->
   <div class="hero" id="heroSection">
-    <div class="hero-badge">⚡ Powered by GPT-4 — NNIT Enterprise</div>
+    <div class="hero-badge">? Powered by GPT-4 � NNIT Enterprise</div>
     <h1>AI Freelancer<br>Platform</h1>
     <p>Connect with top freelancers, post projects, and grow your business with AI-powered matching.</p>
     <div class="hero-actions">
@@ -812,7 +812,7 @@
       <div class="stat-label">Projects Posted</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">€1.2M</div>
+      <div class="stat-number">�1.2M</div>
       <div class="stat-label">Total Paid Out</div>
     </div>
     <div class="stat-card">
@@ -835,10 +835,10 @@
 
   <!-- MAIN TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="showSection('marketplace')">🛒 Marketplace</button>
-    <button class="tab" onclick="showSection('plans')">💎 Plans</button>
-    <button class="tab" onclick="showSection('freelancers')">👥 Freelancers</button>
-    <button class="tab" onclick="showSection('notifications')">🔔 Notifications</button>
+    <button class="tab active" onclick="showSection('marketplace')">?? Marketplace</button>
+    <button class="tab" onclick="showSection('plans')">?? Plans</button>
+    <button class="tab" onclick="showSection('freelancers')">?? Freelancers</button>
+    <button class="tab" onclick="showSection('notifications')">?? Notifications</button>
   </div>
 
   <!-- MARKETPLACE -->
@@ -876,7 +876,7 @@
 
     <div class="jobs-grid" id="jobsGrid">
       <div class="empty">
-        <div class="empty-icon">💼</div>
+        <div class="empty-icon">??</div>
         <p>Loading projects...</p>
       </div>
     </div>
@@ -890,7 +890,7 @@
     <div class="plans-grid">
       <div class="plan-card">
         <div class="plan-name">Freelancer Basic</div>
-        <div class="plan-price">€9.99</div>
+        <div class="plan-price">�9.99</div>
         <div class="plan-period">per month</div>
         <ul class="plan-features">
           <li>Apply to 10 jobs/month</li>
@@ -903,7 +903,7 @@
       <div class="plan-card featured">
         <div class="plan-badge">Most Popular</div>
         <div class="plan-name">Freelancer Pro</div>
-        <div class="plan-price">€24.99</div>
+        <div class="plan-price">�24.99</div>
         <div class="plan-period">per month</div>
         <ul class="plan-features">
           <li>Unlimited job applications</li>
@@ -916,7 +916,7 @@
       </div>
       <div class="plan-card">
         <div class="plan-name">Client Premium</div>
-        <div class="plan-price">€49.99</div>
+        <div class="plan-price">�49.99</div>
         <div class="plan-period">per month</div>
         <ul class="plan-features">
           <li>Post unlimited projects</li>
@@ -967,7 +967,7 @@
       <div>
         <div class="section-title" style="margin-bottom:16px">Top Freelancers</div>
         <div id="freelancersList">
-          <div class="empty"><div class="empty-icon">👥</div><p>Loading freelancers...</p></div>
+          <div class="empty"><div class="empty-icon">??</div><p>Loading freelancers...</p></div>
         </div>
       </div>
     </div>
@@ -983,7 +983,7 @@
       </div>
     </div>
     <div id="notifsList">
-      <div class="empty"><div class="empty-icon">🔔</div><p>Click to load notifications</p></div>
+      <div class="empty"><div class="empty-icon">??</div><p>Click to load notifications</p></div>
     </div>
   </div>
 
@@ -999,7 +999,7 @@
   // ---- HELPERS ----
   function toast(msg, type = 'info') {
     const t = document.getElementById('toast');
-    t.textContent = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ') + msg;
+    t.textContent = (type === 'success' ? '? ' : type === 'error' ? '? ' : '?? ') + msg;
     t.className = 'toast show ' + type;
     setTimeout(() => t.className = 'toast', 3000);
   }
@@ -1129,14 +1129,14 @@
       const res = await api('GET', '/jobs');
       const jobs = res.jobs || res.data || [];
       if (!jobs.length) {
-        grid.innerHTML = '<div class="empty"><div class="empty-icon">💼</div><p>No projects yet. Be the first to post!</p></div>';
+        grid.innerHTML = '<div class="empty"><div class="empty-icon">??</div><p>No projects yet. Be the first to post!</p></div>';
         return;
       }
       grid.innerHTML = jobs.map(job => `
         <div class="job-card">
           <div class="job-header">
             <div class="job-title">${job.title || job.name || 'Project'}</div>
-            <div class="job-budget">€${job.budget || job.price || '0'}</div>
+            <div class="job-budget">�${job.budget || job.price || '0'}</div>
           </div>
           <div class="job-desc">${job.description || 'No description provided.'}</div>
           <div class="job-tags">
@@ -1149,7 +1149,7 @@
         </div>
       `).join('');
     } catch(e) {
-      grid.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load projects</p></div>';
+      grid.innerHTML = '<div class="empty"><div class="empty-icon">??</div><p>Could not load projects</p></div>';
     }
   }
 
@@ -1206,7 +1206,7 @@
     const list = document.getElementById('notifsList');
     const notifs = res.notifications || res.data || [];
     if (!notifs.length) {
-      list.innerHTML = '<div class="empty"><div class="empty-icon">🔔</div><p>No notifications yet</p></div>';
+      list.innerHTML = '<div class="empty"><div class="empty-icon">??</div><p>No notifications yet</p></div>';
       return;
     }
     list.innerHTML = notifs.map(n => `
@@ -1223,7 +1223,7 @@
     const list = document.getElementById('notifsList');
     const logs = res.logs || res.data || [];
     if (!logs.length) {
-      list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>No audit logs yet</p></div>';
+      list.innerHTML = '<div class="empty"><div class="empty-icon">??</div><p>No audit logs yet</p></div>';
       return;
     }
     list.innerHTML = logs.map(l => `
