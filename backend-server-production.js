@@ -169,7 +169,8 @@ app.get('/', (req, res) => {
 // Authentication routes
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
-
+const jobsRoutes = require('./routes/jobs');
+app.use('/api/jobs', jobsRoutes);
 // Audit log routes
 const auditLogRoutes = require('./routes/auditLog');
 app.use('/api/audit-log', auditLogRoutes);

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NNIT Freelance — Standalone UI</title>
+  <style>
+    body{font-family:Inter,Arial,Helvetica,sans-serif;margin:20px;background:#f6f8fa}
+    .wrap{max-width:920px;margin:0 auto}
+    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px}
+    input,button,select{padding:8px;margin:6px 0;width:100%;box-sizing:border-box}
+    .row{display:flex;gap:8px}
+    .row>input{flex:1}
+    pre{background:#111;color:#0f0;padding:12px;border-radius:6px;overflow:auto}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>NNIT Freelance — Standalone UI</h1>
+
+    <div class="card">
+      <h3>Auth</h3>
+      <div class="row">
+        <input id="email" placeholder="email@example.com" />
+        <input id="password" placeholder="password" type="password" />
+      </div>
+      <div class="row">
+        <button id="btn-register">Register</button>
+        <button id="btn-login">Login</button>
+      </div>
+      <div class="row">
+        <button id="btn-profile">Get Profile</button>
+        <button id="btn-logout">Logout</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Notifications & Audit</h3>
+      <div class="row">
+        <button id="btn-notifs">Load Notifications</button>
+        <button id="btn-audit">Load Audit Logs</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Marketplace</h3>
+      <div class="row">
+        <button id="btn-jobs">List Jobs</button>
+        <button id="btn-apply">Apply to first job (stub)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Output</h3>
+      <pre id="output">Ready.</pre>
+    </div>
+  </div>
+
+  <script src="./api.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
