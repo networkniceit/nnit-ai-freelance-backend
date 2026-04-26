@@ -1,8 +1,8 @@
 // NNIT - Authentication Controller
-// Location: controllers/authController.js
-
+// Location: controllers/authController.js 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { sendWelcomeEmail } = require('../services/emailService');
 const { authLogger } = require('./backend-logging-system');
 
 // Generate JWT Token
@@ -50,6 +50,9 @@ const register = async (req, res) => {
 
     // Log successful registration
     authLogger.register(user._id, user.email);
+
+    // Send welcome email
+    sendWelcomeEmail(user.email, user.name);
 
     // Send response
     res.status(201).json({
@@ -255,4 +258,4 @@ module.exports = {
   getProfile,
   updateProfile,
   logout
-};
+}; 
