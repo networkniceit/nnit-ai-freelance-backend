@@ -108,6 +108,7 @@ if (fs.existsSync(standalonePath)) {
   res.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;");
   next();
 }, express.static(standalonePath));
+}
 
 // Serve admin aggregator at /admin when present
 const adminPath = path.join(__dirname, 'frontend-admin');
