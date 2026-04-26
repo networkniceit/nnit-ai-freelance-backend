@@ -7,9 +7,7 @@ const { Pool } = require('pg');
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
-
 const app = express();
-
 const helmet = require('helmet');
 app.use(helmet({ contentSecurityPolicy: false }));
 
@@ -19,7 +17,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ==================== DATABASE CONNECTIONS ====================
-
 // PostgreSQL Connection Pool (create before importing controllers)
 const pgPool = new Pool({
   connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
@@ -174,6 +171,9 @@ const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 const jobsRoutes = require('./routes/jobs');
 app.use('/api/jobs', jobsRoutes);
+const paymentsRoutes = require('./routes/payments');
+app.use('/api/payments', paymentsRoutes); 
+
 // Audit log routes
 const auditLogRoutes = require('./routes/auditLog');
 app.use('/api/audit-log', auditLogRoutes);
