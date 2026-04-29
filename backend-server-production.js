@@ -10,6 +10,7 @@ const fs = require('fs');
 const app = express();
 const helmet = require('helmet');
 app.use(helmet({ contentSecurityPolicy: false }));
+app.use((req, res, next) => { res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"); next(); });
 
 // Body parsers
 app.set('trust proxy', 1);
