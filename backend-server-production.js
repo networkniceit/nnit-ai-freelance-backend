@@ -282,6 +282,20 @@ const startServer = async () => {
       logger.warn('⚠️ PostgreSQL connection failed: ' + error.message);
     }
 
+    app.post('/api/ai/chat', async (req, res) => {
+  const { messages } = req.body;
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({ model: 'gpt-4', messages, max_tokens: 1800, temperature: 0.7 })
+  });
+  const data = await response.json();
+  res.json(data);
+});
+
     app.listen(PORT, () => {
       logger.info(`🚀 NNIT Backend Server running on port ${PORT}`);
       logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
