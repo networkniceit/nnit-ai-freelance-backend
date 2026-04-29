@@ -1,4 +1,4 @@
-// NNIT - Production Server (Fixed - No Circular Dependencies)
+﻿// NNIT - Production Server (Fixed - No Circular Dependencies)
 // Main server file for Railway/Vercel deployment
 
 const express = require('express');
@@ -156,6 +156,9 @@ app.use('/api/notifications', notificationsRoutes);
 const adminRoutes = require('./routes/admin');
 app.use('/', adminRoutes);
 
+
+const productsRoutes = require('./routes/products');
+app.use('/api/products', productsRoutes);
 // ==================== CONVENIENCE ROUTES ====================
 
 app.all('/login', async (req, res) => {
@@ -194,7 +197,7 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
-// ==================== ROOT — SERVE LEGAL AI FRONTEND ====================
+// ==================== ROOT â€” SERVE LEGAL AI FRONTEND ====================
 
 app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, 'index.html');
@@ -246,21 +249,21 @@ const startServer = async () => {
     console.log('PostgreSQL URL:', process.env.POSTGRES_URL ? 'SET' : 'NOT SET');
     try {
       await pgPool.query('SELECT NOW()');
-      logger.info('✅ PostgreSQL connected');
+      logger.info('âœ… PostgreSQL connected');
     } catch (error) {
-      logger.warn('⚠️ PostgreSQL connection failed: ' + error.message);
+      logger.warn('âš ï¸ PostgreSQL connection failed: ' + error.message);
     }
 
     app.listen(PORT, () => {
-      logger.info(`🚀 NNIT Backend Server running on port ${PORT}`);
-      logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🔒 Security: ENABLED`);
-      logger.info(`📝 Logging: ACTIVE`);
-      logger.info(`🔐 Authentication: ENABLED`);
-      logger.info(`📋 Audit Log: ENABLED`);
-      logger.info(`🔔 Notifications: ENABLED`);
-      console.log(`\n✅ Server ready at http://localhost:${PORT}`);
-      console.log(`✅ Health: http://localhost:${PORT}/health\n`);
+      logger.info(`ðŸš€ NNIT Backend Server running on port ${PORT}`);
+      logger.info(`ðŸ“Š Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`ðŸ”’ Security: ENABLED`);
+      logger.info(`ðŸ“ Logging: ACTIVE`);
+      logger.info(`ðŸ” Authentication: ENABLED`);
+      logger.info(`ðŸ“‹ Audit Log: ENABLED`);
+      logger.info(`ðŸ”” Notifications: ENABLED`);
+      console.log(`\nâœ… Server ready at http://localhost:${PORT}`);
+      console.log(`âœ… Health: http://localhost:${PORT}/health\n`);
     });
 
   } catch (error) {
@@ -284,3 +287,4 @@ process.on('SIGINT', async () => {
 startServer();
 
 module.exports = { app, getPgPool: () => global.pgPool }; 
+
