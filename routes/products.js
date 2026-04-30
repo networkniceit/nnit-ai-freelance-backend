@@ -47,4 +47,20 @@ router.post('/', async (req, res) => {
   }
 });
 
+
+// PUT update product
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, price, originalPrice, rating, description, badge } = req.body;
+    const { rows } = await global.pgPool.query(
+      'UPDATE products SET name=COALESCE($1,name), category=COALESCE($2,category), price=COALESCE($3,price), original_price=COALESCE($4,original_price), rating=COALESCE($5,rating), description=COALESCE($6,description), badge=COALESCE($7,badge) WHERE id=$8 RETURNING *',
+      [name, category, price, originalPrice, rating, description, badge, id]
+    );
+    res.json({ success: true, product: rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 module.exports = router;
+
