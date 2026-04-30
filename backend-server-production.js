@@ -1,4 +1,4 @@
-// NNIT - Production Server (Fixed - No Circular Dependencies)
+﻿// NNIT - Production Server (Fixed - No Circular Dependencies)
 // Main server file for Railway/Vercel deployment
 
 const express = require('express');
@@ -161,7 +161,7 @@ app.post('/api/legal-ai', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': Bearer ${process.env.OPENAI_API_KEY}
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({ model: 'gpt-4', messages: msgs, max_tokens: 1800, temperature: 0.7 })
     });
