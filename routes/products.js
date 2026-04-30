@@ -14,10 +14,12 @@ router.post('/setup', async (req, res) => {
         rating INTEGER DEFAULT 4,
         description TEXT,
         badge VARCHAR(50),
+        image TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    res.json({ success: true, message: "Products table created!" });
+    await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT');
+    res.json({ success: true, message: 'Products table ready!' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -63,4 +65,6 @@ router.put('/:id', async (req, res) => {
   }
 });
 module.exports = router;
+
+
 
