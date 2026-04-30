@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 
 // Setup - create table
@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
 // POST add product
 router.post('/', async (req, res) => {
   try {
-    const { name, category, price, originalPrice, rating, description, badge } = req.body;
+    const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
     const { rows } = await global.pgPool.query(
       'INSERT INTO products (name, category, price, original_price, rating, description, badge) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
       [name, category, price, originalPrice, rating || 4, description || '', badge || 'NEW']
@@ -54,10 +54,10 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, price, originalPrice, rating, description, badge } = req.body;
+    const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
     const { rows } = await global.pgPool.query(
-      'UPDATE products SET name=COALESCE($1,name), category=COALESCE($2,category), price=COALESCE($3,price), original_price=COALESCE($4,original_price), rating=COALESCE($5,rating), description=COALESCE($6,description), badge=COALESCE($7,badge) WHERE id=$8 RETURNING *',
-      [name, category, price, originalPrice, rating, description, badge, id]
+      'UPDATE products SET name=COALESCE($1,name), category=COALESCE($2,category), price=COALESCE($3,price), original_price=COALESCE($4,original_price), rating=COALESCE($5,rating), description=COALESCE($6,description), badge=COALESCE($7,badge), image=COALESCE($8,image) WHERE id=$9 RETURNING *',
+      [name, category, price, originalPrice, rating, description, badge, image, id]
     );
     res.json({ success: true, product: rows[0] });
   } catch (err) {
