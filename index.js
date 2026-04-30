@@ -27,6 +27,11 @@ app.use(express.json());
 const cors = require('cors');
 app.use(cors());
 
+// PostgreSQL setup
+const { Pool } = require('pg');
+global.pgPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+global.pgPool.connect().then(() => console.log('PostgreSQL connected')).catch(err => console.error('PostgreSQL error:', err));
+
 // Database connection
 const mongoose = require('mongoose');
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/nnit-freelance';
