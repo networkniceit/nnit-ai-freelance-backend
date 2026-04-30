@@ -180,7 +180,7 @@ app.post('/api/legal-ai', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': Bearer ${process.env.OPENAI_API_KEY}
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({ model: 'gpt-4', messages: msgs, max_tokens: 1800, temperature: 0.7 })
     });
@@ -199,7 +199,7 @@ app.post('/api/legal-ai', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': Bearer ${process.env.OPENAI_API_KEY}
+        'Authorization': `Bearer ``
       },
       body: JSON.stringify({ model: 'gpt-4', messages: msgs, max_tokens: 1800, temperature: 0.7 })
     });
@@ -265,7 +265,7 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
-// ==================== ROOT — SERVE LEGAL AI FRONTEND ====================
+// ==================== ROOT � SERVE LEGAL AI FRONTEND ====================
 
 app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, 'index.html');
@@ -317,21 +317,21 @@ const startServer = async () => {
     console.log('PostgreSQL URL:', process.env.POSTGRES_URL ? 'SET' : 'NOT SET');
     try {
       await pgPool.query('SELECT NOW()');
-      logger.info('✅ PostgreSQL connected');
+      logger.info('? PostgreSQL connected');
     } catch (error) {
-      logger.warn('⚠️ PostgreSQL connection failed: ' + error.message);
+      logger.warn('?? PostgreSQL connection failed: ' + error.message);
     }
 
     app.listen(PORT, () => {
-      logger.info(`🚀 NNIT Backend Server running on port ${PORT}`);
-      logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🔒 Security: ENABLED`);
-      logger.info(`📝 Logging: ACTIVE`);
-      logger.info(`🔐 Authentication: ENABLED`);
-      logger.info(`📋 Audit Log: ENABLED`);
-      logger.info(`🔔 Notifications: ENABLED`);
-      console.log(`\n✅ Server ready at http://localhost:${PORT}`);
-      console.log(`✅ Health: http://localhost:${PORT}/health\n`);
+      logger.info(`?? NNIT Backend Server running on port ${PORT}`);
+      logger.info(`?? Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`?? Security: ENABLED`);
+      logger.info(`?? Logging: ACTIVE`);
+      logger.info(`?? Authentication: ENABLED`);
+      logger.info(`?? Audit Log: ENABLED`);
+      logger.info(`?? Notifications: ENABLED`);
+      console.log(`\n? Server ready at http://localhost:${PORT}`);
+      console.log(`? Health: http://localhost:${PORT}/health\n`);
     });
 
   } catch (error) {
@@ -355,6 +355,7 @@ process.on('SIGINT', async () => {
 startServer();
 
 module.exports = { app, getPgPool: () => global.pgPool }; 
+
 
 
 
