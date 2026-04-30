@@ -41,6 +41,8 @@ mongoose.connect(mongoUri)
 
 
 // Explicitly mount /api/auth for authentication
+const productRoutes = require('./routes/products');
+app.use('/api/products', productRoutes);
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
