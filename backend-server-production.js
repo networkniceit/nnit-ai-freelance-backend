@@ -171,6 +171,25 @@ app.post('/api/legal-ai', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.post('/api/legal-ai', async (req, res) => {
+  try {
+    const { messages, message, prompt } = req.body;
+    const msgs = messages || [{ role: 'user', content: message || prompt }];
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': Bearer ${process.env.OPENAI_API_KEY}
+      },
+      body: JSON.stringify({ model: 'gpt-4', messages: msgs, max_tokens: 1800, temperature: 0.7 })
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ==================== API ROUTES ====================
 
 const authRoutes = require('./routes/auth');
@@ -317,6 +336,7 @@ process.on('SIGINT', async () => {
 startServer();
 
 module.exports = { app, getPgPool: () => global.pgPool }; 
+
 
 
 
