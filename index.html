@@ -2,683 +2,1598 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NNIT Legal AI – Intelligence Platform</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NNIT Legal AI — Professional Legal Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<script src="https://meet.jit.si/external_api.js" async></script>
+<script src="https://js.stripe.com/v3/"></script>
 <style>
+*{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --gold:#c9a84c;--gold-light:#e8c97a;--gold-dim:#7a6230;
-  --navy:#0a0f1e;--navy-mid:#111827;--navy-card:#151d2e;
-  --navy-border:#1e2d45;--navy-hover:#1a2540;
-  --text:#e8eaf0;--text-dim:#8a95a8;--text-muted:#4a5568;
-  --green:#22c55e;--red:#ef4444;--blue:#3b82f6;--amber:#f59e0b;
-  --sidebar-w:260px;
+  --bg:#08090d;--surface:#0f1117;--panel:#151821;--border:#1e2130;
+  --accent:#4f7cff;--accent2:#7c4fff;--gold:#f0c040;--success:#22c55e;
+  --danger:#ef4444;--warn:#f59e0b;--text:#e8eaf0;--muted:#6b7280;
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
-.topbar{background:var(--navy-mid);border-bottom:1px solid var(--navy-border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:12px;}
-.topbar-logo{display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--gold),var(--gold-dim));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 14px rgba(201,168,76,0.4);}
-.logo-text{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold);}
-.logo-sub{font-size:10px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;}
-.ai-badge{display:flex;align-items:center;gap:7px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:20px;padding:4px 12px;font-size:11.5px;color:var(--green);font-weight:600;flex-shrink:0;}
-.ai-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.8s infinite;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.4);}}
-.lang-scroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;justify-content:flex-end;}
-.lang-scroll::-webkit-scrollbar{display:none;}
-.lang-btn{background:none;border:1px solid var(--navy-border);color:var(--text-dim);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s;font-family:'DM Sans',sans-serif;}
-.lang-btn:hover,.lang-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.08);}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden}
+h1,h2,h3,.brand{font-family:'Syne',sans-serif}
+.shell{display:flex;height:100vh}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:24px}
+.brand-logo{padding:20px 16px 12px;border-bottom:1px solid var(--border)}
+.brand-logo .name{font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-logo .sub{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.nav-section{padding:12px 0}
+.nav-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:4px 16px 8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;transition:all .15s;font-size:13.5px;color:var(--muted);border-left:3px solid transparent}
+.nav-item:hover{background:rgba(79,124,255,.07);color:var(--text)}
+.nav-item.active{background:rgba(79,124,255,.12);color:var(--accent);border-left-color:var(--accent)}
+.nav-item .icon{width:18px;text-align:center;font-size:15px}
+.pills{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border)}
+.pill{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600}
+.pill.green{background:rgba(34,197,94,.15);color:var(--success)}
+.pill.blue{background:rgba(79,124,255,.15);color:var(--accent)}
+.pill.gold{background:rgba(240,192,64,.15);color:var(--gold)}
+.pill.red{background:rgba(239,68,68,.15);color:var(--danger)}
+.page-title{font-size:16px;font-weight:700;font-family:'Syne',sans-serif}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.user-chip{font-size:12px;color:var(--muted);background:var(--panel);padding:5px 10px;border-radius:6px;border:1px solid var(--border)}
+.bio-chip{font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:.15s}
+.bio-chip.locked{background:rgba(239,68,68,.1);color:var(--danger);border-color:rgba(239,68,68,.3)}
+.bio-chip.unlocked{background:rgba(34,197,94,.1);color:var(--success);border-color:rgba(34,197,94,.3)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,124,255,.06),transparent);opacity:0;transition:.2s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card:hover::before{opacity:1}
+.card .c-icon{font-size:26px;margin-bottom:10px}
+.card .c-title{font-size:13px;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:4px}
+.card .c-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.card .c-badge{position:absolute;top:12px;right:12px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(79,124,255,.2);color:var(--accent)}
+.card .c-badge.hot{background:rgba(239,68,68,.2);color:var(--danger)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.panel-title{font-size:14px;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+textarea,input,select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;border-radius:8px;padding:10px 12px;width:100%;outline:none;transition:border .15s}
+textarea:focus,input:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:90px;line-height:1.6}
+select option{background:var(--bg)}
+label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-weight:600;font-size:13px;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-success{background:rgba(34,197,94,.15);color:var(--success);border:1px solid rgba(34,197,94,.3)}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.25)}
+.btn-warn{background:rgba(240,192,64,.15);color:var(--gold);border:1px solid rgba(240,192,64,.25)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.chat-messages{min-height:300px;max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px 0 12px}
+.msg{max-width:80%;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.65;animation:fadeUp .2s ease}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:12px 12px 2px 12px}
+.msg.ai{align-self:flex-start;background:var(--bg);border:1px solid var(--border);border-radius:12px 12px 12px 2px}
+.msg.ai .msg-label{font-size:10px;font-weight:700;color:var(--accent);margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chat-input-row{display:flex;gap:8px;margin-top:12px;align-items:flex-end}
+.chat-input-row textarea{min-height:44px;max-height:120px}
+.result-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;min-height:60px}
+.result-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.loading{display:inline-flex;gap:4px;align-items:center}
+.loading span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bounce .8s infinite}
+.loading span:nth-child(2){animation-delay:.15s}
+.loading span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+#camera-video{width:100%;max-height:300px;object-fit:cover;border-radius:8px;background:#000}
+#camera-canvas{display:none}
+.tmpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.tmpl-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:all .15s;font-size:12px}
+.tmpl-card:hover{border-color:var(--accent);color:var(--accent)}
+.tmpl-card .t-icon{font-size:20px;margin-bottom:6px}
+.tmpl-card .t-name{font-weight:600;margin-bottom:2px}
+.tmpl-card .t-cat{font-size:10px;color:var(--muted)}
+.select-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.biz-types{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.biz-btn{padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-size:12px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;transition:all .15s}
+.biz-btn.active,.biz-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,124,255,.1)}
+.doc-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+.doc-row .doc-name{flex:1;font-size:13px;font-weight:600}
+.doc-row .doc-date{font-size:11px;color:var(--muted)}
+.dropzone{border:2px dashed var(--border);border-radius:10px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;color:var(--muted)}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);color:var(--accent);background:rgba(79,124,255,.05)}
+.dropzone .dz-icon{font-size:36px;margin-bottom:10px}
+.page{display:none}
+.page.active{display:block}
+.notice{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--warn);margin-bottom:16px}
+.voice-btn{width:64px;height:64px;border-radius:50%;border:none;font-size:26px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.voice-btn.idle{background:rgba(79,124,255,.15);color:var(--accent)}
+.voice-btn.recording{background:var(--danger);color:#fff;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 12px rgba(239,68,68,0)}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.stat-card .s-num{font-size:22px;font-weight:800;font-family:'Syne',sans-serif;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-card .s-label{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+.sidebar-footer .email{color:var(--accent);font-size:11px;word-break:break-all}
 
-.layout{display:flex;flex:1;height:calc(100vh - 56px);overflow:hidden;}
-.sidebar{width:var(--sidebar-w);background:var(--navy-mid);border-right:1px solid var(--navy-border);display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--navy-border) transparent;flex-shrink:0;}
-.sidebar-profile{padding:16px 14px 12px;border-bottom:1px solid var(--navy-border);}
-.profile-row{display:flex;align-items:center;gap:10px;}
-.avatar{width:38px;height:38px;background:linear-gradient(135deg,var(--gold),var(--gold-dim));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--navy);flex-shrink:0;}
-.profile-name{font-size:13px;font-weight:600;color:var(--text);}
-.profile-role{font-size:11px;color:var(--text-dim);margin-top:1px;}
-.sidebar-sec{padding:8px 10px 2px;}
-.sec-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);padding:4px 8px 5px;}
-.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text-dim);transition:all .2s;position:relative;background:none;border:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif;}
-.nav-item:hover{background:var(--navy-hover);color:var(--text);}
-.nav-item.active{background:rgba(201,168,76,.12);color:var(--gold);}
-.nav-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:var(--gold);border-radius:0 2px 2px 0;}
-.nav-badge{margin-left:auto;background:var(--gold);color:var(--navy);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;}
-.sidebar-stats{padding:12px 14px;border-top:1px solid var(--navy-border);margin-top:auto;}
-.stat-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:var(--text-dim);}
-.stat-val{color:var(--gold);font-weight:600;}
-.sidebar-footer{padding:10px 14px 14px;border-top:1px solid var(--navy-border);font-size:10.5px;color:var(--text-muted);line-height:1.7;}
-.main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
-.panel{display:none;flex:1;flex-direction:column;overflow:hidden;}
-.panel.active{display:flex;}
-.panel-hdr{padding:18px 24px 14px;border-bottom:1px solid var(--navy-border);background:var(--navy-mid);flex-shrink:0;}
-.panel-hdr h2{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);}
-.panel-hdr p{font-size:12px;color:var(--text-dim);margin-top:3px;}
-.chat-messages{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px;}
-.msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
-.msg.user{flex-direction:row-reverse;}
-.msg-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px;}
-.msg-av.ai{background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:var(--navy);font-weight:700;}
-.msg-av.user{background:var(--navy-border);}
-.msg-bubble{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;padding:11px 15px;font-size:13.5px;line-height:1.7;max-width:700px;white-space:pre-wrap;}
-.msg.user .msg-bubble{background:rgba(201,168,76,.08);border-color:rgba(201,168,76,.2);}
-.msg-time{font-size:10px;color:var(--text-muted);margin-top:4px;padding:0 4px;}
-.typing{display:flex;gap:5px;align-items:center;padding:6px 2px;}
-.typing span{width:7px;height:7px;background:var(--gold);border-radius:50%;animation:bounce 1.2s infinite;}
-.typing span:nth-child(2){animation-delay:.2s;}
-.typing span:nth-child(3){animation-delay:.4s;}
-@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
-.chat-footer{padding:14px 24px;background:var(--navy-mid);border-top:1px solid var(--navy-border);flex-shrink:0;}
-.quick-prompts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;}
-.qp{background:var(--navy-card);border:1px solid var(--navy-border);color:var(--text-dim);font-size:11px;border-radius:20px;padding:4px 11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
-.qp:hover{border-color:var(--gold);color:var(--gold);}
-.input-row{display:flex;gap:8px;align-items:flex-end;}
-.chat-input{flex:1;background:var(--navy-card);border:1px solid var(--navy-border);border-radius:10px;padding:11px 15px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13.5px;resize:none;outline:none;transition:border .2s;min-height:46px;max-height:130px;}
-.chat-input:focus{border-color:var(--gold);}
-.chat-input::placeholder{color:var(--text-muted);}
-.btn-send{background:linear-gradient(135deg,var(--gold),var(--gold-dim));border:none;border-radius:10px;padding:11px 20px;color:var(--navy);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s;white-space:nowrap;}
-.btn-send:hover{opacity:.87;}
-.btn-send:disabled{opacity:.4;cursor:not-allowed;}
-.upload-body{flex:1;overflow-y:auto;padding:22px 24px;}
-.dropzone{border:2px dashed var(--navy-border);border-radius:14px;padding:44px 24px;text-align:center;cursor:pointer;transition:all .3s;background:var(--navy-card);}
-.dropzone:hover,.dropzone.drag{border-color:var(--gold);background:rgba(201,168,76,.05);}
-.dz-icon{font-size:38px;margin-bottom:12px;}
-.dz-title{font-size:16px;color:var(--text);font-weight:600;margin-bottom:6px;}
-.dz-sub{font-size:12px;color:var(--text-dim);}
-.file-types{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
-.ft{background:var(--navy-mid);border:1px solid var(--navy-border);color:var(--text-dim);font-family:'DM Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;}
-.upload-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;}
-.act-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;border:1px solid var(--navy-border);background:var(--navy-card);color:var(--text-dim);transition:all .2s;}
-.act-btn:hover{border-color:var(--gold);color:var(--gold);}
-.upload-notice{margin-top:14px;padding:10px 13px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:11.5px;color:var(--text-dim);}
-.file-list{margin-top:18px;display:flex;flex-direction:column;gap:8px;}
-.f-item{display:flex;align-items:center;gap:10px;background:var(--navy-card);border:1px solid var(--navy-border);border-radius:8px;padding:9px 13px;}
-.f-icon{font-size:18px;}
-.f-name{flex:1;font-size:13px;color:var(--text);}
-.f-size{font-size:11px;color:var(--text-muted);}
-.f-rm{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px 5px;}
-.f-rm:hover{color:var(--red);}
-#fileInput{display:none;}
-.docgen-body{flex:1;overflow-y:auto;padding:22px 24px;}
-.section-title{font-size:12px;font-weight:600;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;margin-top:20px;}
-.section-title:first-child{margin-top:0;}
-.templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;}
-.tpl-card{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;text-align:center;}
-.tpl-card:hover{border-color:var(--gold);transform:translateY(-2px);}
-.tpl-icon{font-size:24px;margin-bottom:7px;}
-.tpl-name{font-size:12.5px;color:var(--text);font-weight:500;}
-.tpl-cat{font-size:11px;color:var(--text-muted);margin-top:2px;}
-.ai-result{margin-top:20px;background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;padding:18px;display:none;}
-.ai-result.show{display:block;animation:fadeUp .4s ease;}
-.ai-result-title{font-family:'Playfair Display',serif;font-size:15px;color:var(--gold);margin-bottom:12px;}
-.ai-result-text{font-size:13px;color:var(--text-dim);line-height:1.8;white-space:pre-wrap;}
-.case-body{flex:1;overflow-y:auto;padding:22px 24px;}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:780px;}
-@media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-.form-group.full{grid-column:1/-1;}
-.f-label{font-size:12px;font-weight:500;color:var(--text-dim);letter-spacing:.04em;}
-.f-input,.f-select,.f-textarea{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border .2s;width:100%;}
-.f-input:focus,.f-select:focus,.f-textarea:focus{border-color:var(--gold);}
-.f-select{appearance:none;cursor:pointer;}
-.f-textarea{resize:vertical;min-height:90px;}
-.case-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;}
-.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dim));border:none;border-radius:8px;padding:10px 22px;color:var(--navy);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s;}
-.btn-primary:hover{opacity:.87;}
-.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
-.btn-secondary{background:none;border:1px solid var(--navy-border);border-radius:8px;padding:10px 20px;color:var(--text-dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
-.btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
-.compliance-body{flex:1;overflow-y:auto;padding:22px 24px;}
-.comp-checks{display:flex;flex-direction:column;gap:10px;max-width:760px;margin-top:16px;}
-.comp-item{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;animation:fadeUp .3s ease;}
-.comp-status{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px;}
-.comp-status.ok{background:rgba(34,197,94,.15);color:var(--green);}
-.comp-status.warn{background:rgba(245,158,11,.15);color:var(--amber);}
-.comp-status.fail{background:rgba(239,68,68,.15);color:var(--red);}
-.comp-label{font-size:13px;font-weight:500;color:var(--text);}
-.comp-desc{font-size:12px;color:var(--text-dim);margin-top:3px;}
-.progress-bar{height:4px;background:var(--navy-border);border-radius:4px;margin-top:14px;max-width:760px;overflow:hidden;}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:4px;transition:width .8s ease;width:0%;}
-.tools-body{flex:1;overflow-y:auto;padding:22px 24px;}
-.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
-.tool-card{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:14px;padding:18px;cursor:pointer;transition:all .25s;display:flex;flex-direction:column;gap:8px;}
-.tool-card:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(201,168,76,.1);transform:translateY(-2px);}
-.tc-icon{font-size:26px;}
-.tc-name{font-size:14px;font-weight:600;color:var(--text);}
-.tc-desc{font-size:12px;color:var(--text-dim);line-height:1.5;}
-.tc-btn{margin-top:4px;background:linear-gradient(135deg,var(--gold),var(--gold-dim));border:none;border-radius:7px;padding:8px;color:var(--navy);font-weight:700;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;transition:opacity .2s;}
-.tc-btn:hover{opacity:.85;}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(201,168,76,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--navy-card);border:1px solid var(--gold);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text);z-index:999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;max-width:320px;}
-.toast.show{opacity:1;transform:none;}
+/* MEETING STYLES */
+#jitsi-container{width:100%;height:500px;border-radius:12px;overflow:hidden;background:#000;border:1px solid var(--border)}
+.meeting-grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+.meeting-controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.live-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:20px;font-size:11px;color:var(--danger);font-weight:700}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite}
+.transcript-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;height:200px;overflow-y:auto;font-size:12px;line-height:1.7}
+.transcript-line{margin-bottom:6px;padding:4px 8px;border-radius:4px}
+.transcript-line.speaker{background:rgba(79,124,255,.08);color:var(--accent)}
+.meeting-chat{height:200px;overflow-y:auto;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+.room-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.room-card .r-name{font-weight:700;font-size:13px;flex:1}
+.room-card .r-status{font-size:11px;padding:2px 8px;border-radius:10px}
+.room-card .r-status.live{background:rgba(239,68,68,.15);color:var(--danger)}
+.room-card .r-status.scheduled{background:rgba(79,124,255,.15);color:var(--accent)}
+.meeting-history-row{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px}
+.mh-title{font-weight:700;font-size:13px;margin-bottom:4px}
+.mh-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.mh-summary{font-size:12px;line-height:1.6;color:var(--text)}
+.bio-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center}
+.bio-modal.show{display:flex}
+.bio-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center}
+.bio-icon{font-size:64px;margin-bottom:16px}
+.schedule-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.time-slot{padding:8px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;text-align:center;background:var(--bg);transition:.15s}
+.time-slot:hover,.time-slot.selected{border-color:var(--accent);background:rgba(79,124,255,.1);color:var(--accent)}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-logo">
-    <div class="logo-icon">⚖️</div>
-    <div>
-      <div class="logo-text">NNIT Legal AI</div>
-      <div class="logo-sub">Intelligence Platform</div>
+<!-- BIOMETRIC MODAL -->
+<div class="bio-modal" id="bio-modal">
+  <div class="bio-box">
+    <div class="bio-icon" id="bio-icon">🔒</div>
+    <h2 style="font-family:'Syne',sans-serif;margin-bottom:8px" id="bio-title">Biometric Authentication</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px" id="bio-desc">Use fingerprint or face ID to secure your account</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="registerBiometric()">🔐 Register Biometric</button>
+      <button class="btn btn-ghost" onclick="closeBioModal()">Skip for now</button>
     </div>
-  </div>
-  <div class="ai-badge"><div class="ai-dot"></div><span id="aiLabel">AI ACTIVE</span></div>
-  <div class="lang-scroll">
-    <button class="lang-btn active" onclick="setLang(this,'Respond in English.')">🇬🇧 English</button>
-    <button class="lang-btn" onclick="setLang(this,'Reageer in het Nederlands.')">🇳🇱 Dutch</button>
-    <button class="lang-btn" onclick="setLang(this,'Antworte auf Deutsch.')">🇩🇪 German</button>
-    <button class="lang-btn" onclick="setLang(this,'Réponds en français.')">🇫🇷 French</button>
-    <button class="lang-btn" onclick="setLang(this,'Responde en español.')">🇪🇸 Spanish</button>
-    <button class="lang-btn" onclick="setLang(this,'Rispondi in italiano.')">🇮🇹 Italian</button>
-    <button class="lang-btn" onclick="setLang(this,'Responda em português.')">🇵🇹 Portuguese</button>
-    <button class="lang-btn" onclick="setLang(this,'أجب باللغة العربية.')">🇸🇦 Arabic</button>
-    <button class="lang-btn" onclick="setLang(this,'请用中文回答。')">🇨🇳 Chinese</button>
-    <button class="lang-btn" onclick="setLang(this,'日本語で回答してください。')">🇯🇵 Japanese</button>
-    <button class="lang-btn" onclick="setLang(this,'한국어로 답변하세요.')">🇰🇷 Korean</button>
-    <button class="lang-btn" onclick="setLang(this,'Отвечайте на русском языке.')">🇷🇺 Russian</button>
+    <div id="bio-status" style="margin-top:12px;font-size:12px;color:var(--muted)"></div>
   </div>
 </div>
 
+<div class="shell">
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="brand-logo">
+    <div class="name">⚖️ NNIT Legal AI</div>
+    <div class="sub">Professional Legal Assistant</div>
+  </div>
+  <div class="pills">
+    <span class="pill blue">GPT-4</span>
+    <span class="pill green">GDPR ✓</span>
+    <span class="pill gold">500+ Tmpl</span>
+    <span class="pill red">🎥 Live</span>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" onclick="gotoPage('dashboard',this)"><span class="icon">🏠</span> Dashboard</div>
+    <div class="nav-item" onclick="gotoPage('chat',this)"><span class="icon">💬</span> AI Legal Chat</div>
+    <div class="nav-item" onclick="gotoPage('upload',this)"><span class="icon">📎</span> Upload Documents</div>
+    <div class="nav-item" onclick="gotoPage('camera',this)"><span class="icon">📷</span> Camera Scanner</div>
+    <div class="nav-item" onclick="gotoPage('docgen',this)"><span class="icon">📄</span> Document Generator</div>
+    <div class="nav-item" onclick="gotoPage('case',this)"><span class="icon">⚖️</span> Case Builder</div>
+    <div class="nav-item" onclick="gotoPage('compliance',this)"><span class="icon">✅</span> Compliance Scanner</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">🎥 Meetings</div>
+    <div class="nav-item" onclick="gotoPage('meeting',this)"><span class="icon">📹</span> Start Meeting</div>
+    <div class="nav-item" onclick="gotoPage('schedule',this)"><span class="icon">📅</span> Schedule Meeting</div>
+    <div class="nav-item" onclick="gotoPage('meetinghistory',this)"><span class="icon">📋</span> Meeting History</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Tools</div>
+    <div class="nav-item" onclick="gotoPage('analyze',this)"><span class="icon">🔍</span> Contract Analyzer</div>
+    <div class="nav-item" onclick="gotoPage('risk',this)"><span class="icon">⚠️</span> Risk Assessment</div>
+    <div class="nav-item" onclick="gotoPage('deadlines',this)"><span class="icon">📅</span> Extract Deadlines</div>
+    <div class="nav-item" onclick="gotoPage('parties',this)"><span class="icon">👥</span> Identify Parties</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Templates & Voice</div>
+    <div class="nav-item" onclick="gotoPage('templates',this)"><span class="icon">📋</span> 500+ Templates</div>
+    <div class="nav-item" onclick="gotoPage('voicewriter',this)"><span class="icon">🎤</span> Voice Writer</div>
+    <div class="nav-item" onclick="gotoPage('voicereader',this)"><span class="icon">🔊</span> Voice Reader</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">💳 Payments & Portal</div>
+    <div class="nav-item" onclick="gotoPage('payments',this)"><span class="icon">💳</span> Book Consultation</div>
+    <div class="nav-item" onclick="gotoPage('portal',this)"><span class="icon">👤</span> Client Portal</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">My Docs</div>
+    <div class="nav-item" onclick="gotoPage('saved',this)"><span class="icon">💾</span> Saved Documents</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="email">📧 networkniceit@gmail.com</div>
+    <div style="margin-top:4px">Solomon Omomeje Ayodele</div>
+    <div style="margin-top:8px">
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="showBioModal()">🔐 Biometric Settings</button>
+    </div>
+  </div>
+</nav>
 
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="topbar-title">🏠 Dashboard</div>
+    <div class="topbar-right">
+      <div class="bio-chip locked" id="bio-status-chip" onclick="showBioModal()">🔒 Secure Login</div>
+      <select id="lang-select" onchange="changeLang(this.value)" style="background:var(--panel);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer">
+        <option value="en">🇬🇧 English</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="nl">🇳🇱 Nederlands</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="it">🇮🇹 Italiano</option>
+        <option value="pt">🇵🇹 Português</option>
+        <option value="ar">🇸🇦 العربية</option>
+        <option value="zh">🇨🇳 中文</option>
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="ru">🇷🇺 Русский</option>
+      </select>
+      <div class="user-chip">Solomon · NNIT</div>
+    </div>
+  </div>
+  <div class="content">
 
-<div class="layout">
-  <aside class="sidebar">
-    <div class="sidebar-profile">
-      <div class="profile-row">
-        <div class="avatar">SO</div>
-        <div>
-          <div class="profile-name">Solomon Omomeje</div>
-          <div class="profile-role">Legal Services</div>
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-row">
+        <div class="stat-card"><div class="s-num">500+</div><div class="s-label">Templates</div></div>
+        <div class="stat-card"><div class="s-num">12</div><div class="s-label">Languages</div></div>
+        <div class="stat-card"><div class="s-num">GPT-4</div><div class="s-label">AI Model</div></div>
+        <div class="stat-card"><div class="s-num">GDPR</div><div class="s-label">Compliant</div></div>
+        <div class="stat-card"><div class="s-num">🎥</div><div class="s-label">Live Meetings</div></div>
+      </div>
+      <div class="grid">
+        <div class="card" onclick="gotoPageById('meeting','📹 Video Meetings')"><div class="c-icon">📹</div><div class="c-title">Video Meetings</div><div class="c-desc">1-on-1 or group meetings with recording & AI transcription</div><div class="c-badge hot">LIVE</div></div>
+        <div class="card" onclick="gotoPageById('schedule','📅 Schedule Meeting')"><div class="c-icon">📅</div><div class="c-title">Schedule Meeting</div><div class="c-desc">Book client sessions with automated reminders</div><div class="c-badge hot">NEW</div></div>
+        <div class="card" onclick="gotoPageById('chat','💬 AI Legal Chat')"><div class="c-icon">💬</div><div class="c-title">AI Legal Chat</div><div class="c-desc">Ask any legal question and get instant AI-powered advice</div></div>
+        <div class="card" onclick="gotoPageById('upload','📎 Upload Documents')"><div class="c-icon">📎</div><div class="c-title">Upload Documents</div><div class="c-desc">Upload contracts and get AI risk analysis instantly</div></div>
+        <div class="card" onclick="gotoPageById('camera','📷 Camera Scanner')"><div class="c-icon">📷</div><div class="c-title">Camera Scanner</div><div class="c-desc">Scan physical legal documents with your camera</div><div class="c-badge">NEW</div></div>
+        <div class="card" onclick="gotoPageById('docgen','📄 Document Generator')"><div class="c-icon">📄</div><div class="c-title">Document Generator</div><div class="c-desc">Generate NDAs, contracts, legal letters instantly</div></div>
+        <div class="card" onclick="gotoPageById('case','⚖️ Case Builder')"><div class="c-icon">⚖️</div><div class="c-title">Case Builder</div><div class="c-desc">Build your legal case with AI strategy</div></div>
+        <div class="card" onclick="gotoPageById('compliance','✅ Compliance Scanner')"><div class="c-icon">✅</div><div class="c-title">Compliance Scanner</div><div class="c-desc">Check your business compliance with AI</div></div>
+        <div class="card" onclick="gotoPageById('analyze','🔍 Contract Analyzer')"><div class="c-icon">🔍</div><div class="c-title">Contract Analyzer</div><div class="c-desc">Deep AI analysis of any contract text</div></div>
+        <div class="card" onclick="gotoPageById('voicewriter','🎤 Voice Writer')"><div class="c-icon">🎤</div><div class="c-title">Voice Writer</div><div class="c-desc">Dictate legal text with continuous recording</div></div>
+        <div class="card" onclick="gotoPageById('voicereader','🔊 Voice Reader')"><div class="c-icon">🔊</div><div class="c-title">Voice Reader</div><div class="c-desc">Listen to any legal document read aloud</div></div>
+        <div class="card" onclick="gotoPageById('meetinghistory','📋 Meeting History')"><div class="c-icon">📋</div><div class="c-title">Meeting History</div><div class="c-desc">View past meetings, transcripts and AI summaries</div></div>
+      </div>
+      <div class="notice">⚠️ AI legal advice is informational only. Consult a licensed attorney for official legal representation. · GDPR Compliant · Confidential</div>
+    </div>
+
+    <!-- VIDEO MEETING -->
+    <div class="page" id="page-meeting">
+      <div class="panel">
+        <div class="panel-title">📹 Video Meeting Room <span id="live-indicator" style="display:none" class="live-badge"><span class="live-dot"></span>LIVE</span></div>
+        <!-- Setup Screen -->
+        <div id="meeting-setup">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label>Meeting Room Name</label>
+              <input type="text" id="room-name" placeholder="nnit-legal-consultation-001" value="nnit-legal-"/>
+            </div>
+            <div>
+              <label>Meeting Type</label>
+              <select id="meeting-type">
+                <option>1-on-1 Client Consultation</option>
+                <option>Group Legal Workshop</option>
+                <option>Contract Review Session</option>
+                <option>Case Strategy Meeting</option>
+                <option>Compliance Training</option>
+                <option>Court Preparation</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label>Your Display Name</label>
+              <input type="text" id="display-name" value="Solomon Omomeje — NNIT Legal"/>
+            </div>
+            <div>
+              <label>Meeting Password (optional)</label>
+              <input type="password" id="meeting-password" placeholder="Leave empty for open room"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+            <label style="text-transform:none;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="enable-transcription" checked style="width:auto"/> 🎤 AI Live Transcription
+            </label>
+            <label style="text-transform:none;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:16px">
+              <input type="checkbox" id="enable-recording" checked style="width:auto"/> 🔴 Auto Record
+            </label>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="startMeeting()">📹 Start Meeting Now</button>
+            <button class="btn btn-ghost" onclick="copyInviteLink()">🔗 Copy Invite Link</button>
+            <button class="btn btn-ghost" onclick="gotoPageById('schedule','📅 Schedule Meeting')">📅 Schedule Instead</button>
+          </div>
+          <div id="invite-copied" style="display:none;margin-top:8px;font-size:12px;color:var(--success)">✓ Invite link copied to clipboard!</div>
         </div>
-      </div>
-    </div>
-    <div class="sidebar-sec">
-      <div class="sec-label">Main</div>
-      <button class="nav-item active" onclick="showPanel('chat',this)">💬 AI Legal Chat</button>
-      <button class="nav-item" onclick="showPanel('upload',this)">📎 Upload Documents</button>
-      <button class="nav-item" onclick="showPanel('docgen',this)">📄 Document Generator <span class="nav-badge">500+</span></button>
-      <button class="nav-item" onclick="showPanel('case',this)">⚖️ Case Builder</button>
-      <button class="nav-item" onclick="showPanel('compliance',this)">✅ Compliance Scanner</button>
-    </div>
-    <div class="sidebar-sec">
-      <div class="sec-label">Tools</div>
-      <button class="nav-item" onclick="toolChat('Analyze a standard commercial contract and identify the top 10 risk areas with recommendations.')">🔍 Contract Analyzer</button>
-      <button class="nav-item" onclick="toolChat('Perform a comprehensive legal risk assessment. List risks by severity: High, Medium, Low.')">⚠️ Risk Assessment</button>
-      <button class="nav-item" onclick="showPanel('upload',this);showToast('Upload a document to extract deadlines')">📅 Extract Deadlines</button>
-      <button class="nav-item" onclick="showPanel('upload',this);showToast('Upload a document to identify parties')">👥 Identify Parties</button>
-    </div>
-    <div class="sidebar-stats">
-      <div class="stat-row"><span>Templates</span><span class="stat-val">500+</span></div>
-      <div class="stat-row"><span>Languages</span><span class="stat-val">12</span></div>
-      <div class="stat-row"><span>AI Model</span><span class="stat-val">GPT-4</span></div>
-      <div class="stat-row"><span>GDPR</span><span class="stat-val">✓</span></div>
-      <div class="stat-row"><span>Confidential</span><span class="stat-val">✓</span></div>
-    </div>
-    <div class="sidebar-footer">
-      <div>📧 networkniceit@gmail.com</div>
-      <div>👤 Solomon Omomeje Ayodele</div>
-      <div style="margin-top:6px;font-size:10px;">⚠ AI advice is informational only. Consult a licensed attorney for official representation.</div>
-    </div>
-  </aside>
-
-  <main class="main">
-
-    <!-- CHAT -->
-    <div class="panel active" id="panel-chat">
-      <div class="panel-hdr">
-        <h2>💬 AI Legal Chat</h2>
-        <p>Ask any legal question — powered by GPT-4</p>
-      </div>
-      <div class="chat-messages" id="chatMessages">
-        <div class="msg">
-          <div class="msg-av ai">⚖️</div>
-          <div>
-            <div class="msg-bubble">Hello, I'm your NNIT Legal AI assistant powered by GPT-4. I can help with contracts, case strategy, compliance, document drafting, and any legal question. How can I assist you today?</div>
-            <div class="msg-time">NNIT Legal AI · Just now</div>
+        <!-- Active Meeting Screen -->
+        <div id="meeting-active" style="display:none">
+          <div class="meeting-grid">
+            <div>
+              <div id="jitsi-container"></div>
+              <div class="meeting-controls">
+                <button class="btn btn-danger btn-sm" onclick="endMeeting()">📵 End Meeting</button>
+                <button class="btn btn-warn btn-sm" id="rec-btn" onclick="toggleRecording()">🔴 Start Recording</button>
+                <button class="btn btn-ghost btn-sm" onclick="downloadTranscript()">📄 Download Transcript</button>
+                <button class="btn btn-ghost btn-sm" onclick="generateMeetingSummary()">🤖 AI Summary</button>
+              </div>
+            </div>
+            <div>
+              <div class="panel-title" style="font-size:12px">🎤 Live Transcription</div>
+              <div class="transcript-box" id="transcript-box">
+                <div style="color:var(--muted);font-size:12px">Transcription will appear here when you speak...</div>
+              </div>
+              <div style="margin-top:10px">
+                <div class="panel-title" style="font-size:12px">💬 Meeting Chat</div>
+                <div class="meeting-chat" id="meeting-chat"></div>
+                <div style="display:flex;gap:6px">
+                  <input type="text" id="meeting-chat-input" placeholder="Send a message..." style="font-size:12px" onkeydown="if(event.key==='Enter') sendMeetingChat()"/>
+                  <button class="btn btn-primary btn-sm" onclick="sendMeetingChat()">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="meeting-summary-box" style="display:none;margin-top:16px">
+            <div class="panel-title">🤖 AI Meeting Summary</div>
+            <div class="result-box" id="meeting-summary-result"></div>
+            <div class="result-actions">
+              <button class="btn btn-ghost btn-sm" onclick="saveMeetingSummary()">💾 Save Summary</button>
+              <button class="btn btn-ghost btn-sm" onclick="downloadResult('meeting-summary-result','Meeting_Summary')">⬇ Download</button>
+            </div>
           </div>
         </div>
       </div>
-      <div class="chat-footer">
-        <div class="quick-prompts">
-          <button class="qp" onclick="quickPrompt('What are the key risks in a standard NDA?')">NDA risks</button>
-          <button class="qp" onclick="quickPrompt('Explain GDPR compliance requirements for a SaaS business')">GDPR compliance</button>
-          <button class="qp" onclick="quickPrompt('Draft a limitation of liability clause')">Liability clause</button>
-          <button class="qp" onclick="quickPrompt('What does force majeure mean in contract law?')">Force majeure</button>
-          <button class="qp" onclick="quickPrompt('What are the elements of a legally binding contract?')">Contract elements</button>
+    </div>
+
+    <!-- SCHEDULE MEETING -->
+    <div class="page" id="page-schedule">
+      <div class="panel">
+        <div class="panel-title">📅 Schedule a Meeting</div>
+        <div class="schedule-grid">
+          <div>
+            <label>Client Name</label>
+            <input type="text" id="sched-client" placeholder="Client full name"/>
+          </div>
+          <div>
+            <label>Client Email</label>
+            <input type="email" id="sched-email" placeholder="client@email.com"/>
+          </div>
+          <div>
+            <label>Meeting Date</label>
+            <input type="date" id="sched-date"/>
+          </div>
+          <div>
+            <label>Meeting Time</label>
+            <input type="time" id="sched-time"/>
+          </div>
+          <div>
+            <label>Duration</label>
+            <select id="sched-duration">
+              <option>30 minutes</option>
+              <option>1 hour</option>
+              <option>1.5 hours</option>
+              <option>2 hours</option>
+            </select>
+          </div>
+          <div>
+            <label>Meeting Type</label>
+            <select id="sched-type">
+              <option>1-on-1 Consultation</option>
+              <option>Group Session</option>
+              <option>Contract Review</option>
+              <option>Case Strategy</option>
+            </select>
+          </div>
         </div>
-        <div class="input-row">
-          <textarea class="chat-input" id="chatInput" placeholder="Ask a legal question…" rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="btn-send" id="sendBtn" onclick="sendChat()">Send ↗</button>
+        <div style="margin-bottom:14px">
+          <label>Agenda / Notes</label>
+          <textarea id="sched-agenda" rows="3" placeholder="Topics to discuss, documents to review..."></textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="scheduleMeeting()">📅 Schedule Meeting</button>
+          <button class="btn btn-ghost" onclick="generateAgenda()">🤖 AI Generate Agenda</button>
+        </div>
+        <div id="sched-result" style="margin-top:16px;display:none">
+          <div class="result-box" id="sched-result-box"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">📋 Upcoming Meetings</div>
+        <div id="upcoming-meetings-list"></div>
+        <div id="no-upcoming" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No meetings scheduled yet.</div>
+      </div>
+    </div>
+
+    <!-- MEETING HISTORY -->
+    <div class="page" id="page-meetinghistory">
+      <div class="panel">
+        <div class="panel-title">📋 Meeting History</div>
+        <div id="meeting-history-list"></div>
+        <div id="no-history" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No past meetings recorded yet.</div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="page" id="page-chat">
+      <div class="panel">
+        <div class="panel-title">💬 AI Legal Chat</div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="msg ai"><div class="msg-label">NNIT Legal AI</div>Hello! I'm your AI legal assistant. Ask me anything about contracts, employment law, GDPR, compliance, intellectual property, or any legal matter.</div>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chat-input" placeholder="Ask your legal question..." rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+          <button class="btn btn-primary" onclick="sendChat()">Send ↗</button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="quickChat('What are my rights as an employee?')">Employee rights</button>
+          <button class="btn btn-ghost btn-sm" onclick="quickChat('Explain GDPR compliance for small businesses')">GDPR basics</button>
+          <button class="btn btn-ghost btn-sm" onclick="quickChat('What should an NDA include?')">NDA essentials</button>
+          <button class="btn btn-ghost btn-sm" onclick="quickChat('How do I handle a contract dispute?')">Contract dispute</button>
         </div>
       </div>
     </div>
 
     <!-- UPLOAD -->
-    <div class="panel" id="panel-upload">
-      <div class="panel-hdr">
-        <h2>📎 Upload Legal Documents</h2>
-        <p>Upload contracts and legal files for instant GPT-4 analysis</p>
-      </div>
-      <div class="upload-body">
-        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" ondragover="dragOver(event)" ondragleave="dragLeave()" ondrop="dropFile(event)">
-          <div class="dz-icon">📎</div>
-          <div class="dz-title">Drop files here or click to browse</div>
-          <div class="dz-sub">Max 10MB per file</div>
-          <div class="file-types">
-            <span class="ft">PDF</span><span class="ft">DOCX</span><span class="ft">PNG</span><span class="ft">JPG</span><span class="ft">TXT</span><span class="ft">XLSX</span>
+    <div class="page" id="page-upload">
+      <div class="panel">
+        <div class="panel-title">📎 Upload Documents</div>
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+          <div class="dz-icon">📄</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:6px">Drop your document here or click to browse</div>
+          <div style="font-size:12px">Supports PDF, DOC, DOCX, TXT</div>
+        </div>
+        <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt" style="display:none" onchange="handleFile(this)"/>
+        <div id="file-content" style="margin-top:14px;display:none">
+          <label>Extracted Document Text</label>
+          <textarea id="file-text" rows="6" placeholder="Document text will appear here..."></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="analyzeUpload('analyze')">🔍 Analyze Contract</button>
+            <button class="btn btn-ghost btn-sm" onclick="analyzeUpload('risk')">⚠️ Risk Assessment</button>
+            <button class="btn btn-ghost btn-sm" onclick="analyzeUpload('deadlines')">📅 Extract Deadlines</button>
+            <button class="btn btn-ghost btn-sm" onclick="analyzeUpload('parties')">👥 Identify Parties</button>
           </div>
         </div>
-        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.png,.jpg,.jpeg,.txt,.xlsx" onchange="handleFiles(event)"/>
-        <div class="upload-actions">
-          <button class="act-btn" onclick="uploadAction('Summarize all uploaded documents and extract their key legal points')">📋 Summarize All</button>
-          <button class="act-btn" onclick="uploadAction('Perform a full legal risk analysis identifying all potential risks, red flags and liabilities')">⚠️ Risk Analysis</button>
-          <button class="act-btn" onclick="uploadAction('Perform a comprehensive legal review with clause-by-clause analysis')">🔍 Full Review</button>
-          <button class="act-btn" onclick="uploadAction('Extract and list all parties, roles, and signatories mentioned in the documents')">👥 Extract Parties</button>
-          <button class="act-btn" onclick="uploadAction('Extract all dates, deadlines, notice periods and time-sensitive obligations')">📅 Extract Dates</button>
-        </div>
-        <div class="upload-notice">⚠ All documents processed confidentially · GDPR compliant · Not stored permanently</div>
-        <div class="file-list" id="fileList"></div>
-        <div id="uploadAnalysis"></div>
+        <div id="upload-result" class="result-box" style="margin-top:14px;display:none"></div>
       </div>
     </div>
 
-    <!-- DOC GENERATOR -->
-    <div class="panel" id="panel-docgen">
-      <div class="panel-hdr">
-        <h2>📄 Document Generator</h2>
-        <p>Generate professional legal documents instantly with GPT-4 — 500+ templates</p>
+    <!-- CAMERA -->
+    <div class="page" id="page-camera">
+      <div class="panel">
+        <div class="panel-title">📷 Camera Scanner</div>
+        <video id="camera-video" autoplay playsinline></video>
+        <canvas id="camera-canvas"></canvas>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="cam-start-btn" onclick="startCamera()">📷 Start Camera</button>
+          <button class="btn btn-ghost" id="cam-capture-btn" onclick="capturePhoto()" style="display:none">⚡ Capture</button>
+          <button class="btn btn-ghost" id="cam-switch-btn" onclick="switchCamera()" style="display:none">🔄 Switch Camera</button>
+          <button class="btn btn-ghost" id="cam-stop-btn" onclick="stopCamera()" style="display:none">⏹ Stop</button>
+        </div>
+        <div id="camera-result" style="margin-top:14px;display:none">
+          <img id="captured-img" style="width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:10px"/>
+          <label>Scanned Text</label>
+          <textarea id="camera-text" rows="5" placeholder="Captured text will appear here..."></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="analyzeCamera('analyze')">🔍 Analyze Document</button>
+            <button class="btn btn-ghost btn-sm" onclick="analyzeCamera('risk')">⚠️ Risk Assessment</button>
+          </div>
+        </div>
+        <div id="camera-ai-result" class="result-box" style="margin-top:14px;display:none"></div>
       </div>
-      <div class="docgen-body">
-        <div class="section-title">Corporate & Business</div>
-        <div class="templates-grid">
-          <div class="tpl-card" onclick="generateDoc('Non-Disclosure Agreement (NDA)')"><div class="tpl-icon">🤝</div><div class="tpl-name">NDA</div><div class="tpl-cat">Confidentiality</div></div>
-          <div class="tpl-card" onclick="generateDoc('Service Agreement')"><div class="tpl-icon">📑</div><div class="tpl-name">Service Agreement</div><div class="tpl-cat">Contract</div></div>
-          <div class="tpl-card" onclick="generateDoc('Partnership Agreement')"><div class="tpl-icon">🏢</div><div class="tpl-name">Partnership Agreement</div><div class="tpl-cat">Corporate</div></div>
-          <div class="tpl-card" onclick="generateDoc('Employment Contract')"><div class="tpl-icon">💼</div><div class="tpl-name">Employment Contract</div><div class="tpl-cat">HR</div></div>
-          <div class="tpl-card" onclick="generateDoc('Purchase Agreement')"><div class="tpl-icon">🛒</div><div class="tpl-name">Purchase Agreement</div><div class="tpl-cat">Sales</div></div>
-          <div class="tpl-card" onclick="generateDoc('Terms and Conditions for a website or app')"><div class="tpl-icon">📋</div><div class="tpl-name">Terms & Conditions</div><div class="tpl-cat">Web/App</div></div>
+    </div>
+
+    <!-- DOCUMENT GENERATOR -->
+    <div class="page" id="page-docgen">
+      <div class="panel">
+        <div class="panel-title">📄 Document Generator</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <label>Document Type</label>
+            <select id="doc-type">
+              <option>Non-Disclosure Agreement (NDA)</option><option>Employment Contract</option>
+              <option>Service Agreement</option><option>Partnership Agreement</option>
+              <option>Privacy Policy</option><option>Terms of Service</option>
+              <option>Cease and Desist Letter</option><option>Demand Letter</option>
+              <option>Freelance Contract</option><option>Lease Agreement</option>
+            </select>
+          </div>
+          <div>
+            <label>Business Type</label>
+            <select id="doc-biz-type">
+              <option>Sole Trader</option><option>Limited Company (Ltd)</option>
+              <option>Partnership</option><option>LLP</option>
+              <option>Corporation</option><option>Startup</option>
+            </select>
+          </div>
         </div>
-        <div class="section-title">IP & Licensing</div>
-        <div class="templates-grid">
-          <div class="tpl-card" onclick="generateDoc('Intellectual Property Assignment Agreement')"><div class="tpl-icon">©️</div><div class="tpl-name">IP Assignment</div><div class="tpl-cat">IP</div></div>
-          <div class="tpl-card" onclick="generateDoc('Software Licence Agreement')"><div class="tpl-icon">🔑</div><div class="tpl-name">Software Licence</div><div class="tpl-cat">Licensing</div></div>
-          <div class="tpl-card" onclick="generateDoc('Creative Rights Agreement')"><div class="tpl-icon">🎨</div><div class="tpl-name">Creative Rights</div><div class="tpl-cat">Creative</div></div>
-          <div class="tpl-card" onclick="generateDoc('Data Processing Agreement (DPA) compliant with GDPR')"><div class="tpl-icon">🔐</div><div class="tpl-name">Data Processing Agreement</div><div class="tpl-cat">GDPR</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div><label>Your Name / Company</label><input type="text" id="doc-party1" placeholder="NNIT Tech GmbH"/></div>
+          <div><label>Other Party</label><input type="text" id="doc-party2" placeholder="Client / Partner name"/></div>
         </div>
-        <div class="section-title">Legal Letters</div>
-        <div class="templates-grid">
-          <div class="tpl-card" onclick="generateDoc('Cease and Desist Letter')"><div class="tpl-icon">📧</div><div class="tpl-name">Cease & Desist</div><div class="tpl-cat">Enforcement</div></div>
-          <div class="tpl-card" onclick="generateDoc('Legal Demand Letter')"><div class="tpl-icon">⚖️</div><div class="tpl-name">Demand Letter</div><div class="tpl-cat">Litigation</div></div>
-          <div class="tpl-card" onclick="generateDoc('Tenancy Agreement')"><div class="tpl-icon">🏠</div><div class="tpl-name">Tenancy Agreement</div><div class="tpl-cat">Property</div></div>
-          <div class="tpl-card" onclick="generateDoc('International Commercial Contract')"><div class="tpl-icon">🌍</div><div class="tpl-name">International Contract</div><div class="tpl-cat">Cross-border</div></div>
+        <div style="margin-bottom:14px">
+          <label>Key Details & Requirements</label>
+          <textarea id="doc-details" rows="4" placeholder="Describe specific terms, duration, jurisdiction, payment, special clauses..."></textarea>
         </div>
-        <div class="ai-result" id="docgenResult">
-          <div class="ai-result-title" id="docgenTitle"></div>
-          <div class="ai-result-text" id="docgenText"></div>
-          <button class="btn-secondary" style="margin-top:14px;" onclick="exportText('docgenText','Legal_Document')">📥 Export</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="generateDocument()">📄 Generate Document ↗</button>
+        </div>
+        <div id="doc-result-box" style="margin-top:16px;display:none">
+          <div class="result-box" id="doc-result"></div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-sm" onclick="downloadDoc()">⬇ Download</button>
+            <button class="btn btn-ghost btn-sm" onclick="saveDoc('docgen')">💾 Save</button>
+            <button class="btn btn-ghost btn-sm" onclick="readAloud('doc-result')">🔊 Read Aloud</button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- CASE BUILDER -->
-    <div class="panel" id="panel-case">
-      <div class="panel-hdr">
-        <h2>⚖️ Case Builder</h2>
-        <p>Build your legal case strategy with GPT-4 AI guidance</p>
-      </div>
-      <div class="case-body">
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="f-label">Case Type</label>
-            <select class="f-select" id="caseType">
-              <option>Commercial Dispute</option><option>Employment Law</option><option>Intellectual Property</option>
-              <option>Contract Breach</option><option>Data Protection / GDPR</option><option>Personal Injury</option>
-              <option>Property Dispute</option><option>Corporate Litigation</option>
+    <div class="page" id="page-case">
+      <div class="panel">
+        <div class="panel-title">⚖️ Case Builder</div>
+        <div class="select-grid">
+          <div>
+            <label>Case Type</label>
+            <select id="case-type">
+              <option>Contract Dispute</option><option>Employment Dispute</option>
+              <option>IP Infringement</option><option>Personal Injury</option>
+              <option>Debt Recovery</option><option>Criminal Defence</option>
+              <option>GDPR Violation</option><option>Consumer Rights</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="f-label">Jurisdiction</label>
-            <select class="f-select" id="caseJurisdiction">
-              <option>England & Wales</option><option>Netherlands</option><option>Germany</option>
-              <option>France</option><option>European Union</option><option>United States</option><option>International</option>
+          <div>
+            <label>Your Position</label>
+            <select id="case-position"><option>Claimant / Plaintiff</option><option>Defendant</option></select>
+          </div>
+          <div>
+            <label>Jurisdiction</label>
+            <select id="case-jurisdiction">
+              <option>United Kingdom</option><option>European Union</option>
+              <option>United States</option><option>Germany</option><option>Netherlands</option>
             </select>
           </div>
-          <div class="form-group"><label class="f-label">Client Name</label><input class="f-input" id="caseClient" placeholder="e.g. Acme Ltd"/></div>
-          <div class="form-group"><label class="f-label">Opposing Party</label><input class="f-input" id="caseOpposing" placeholder="e.g. Respondent name"/></div>
-          <div class="form-group"><label class="f-label">Incident Date</label><input class="f-input" id="caseDate" type="date"/></div>
-          <div class="form-group"><label class="f-label">Claim Value (€)</label><input class="f-input" id="caseValue" type="number" placeholder="e.g. 50000"/></div>
-          <div class="form-group full"><label class="f-label">Case Summary</label><textarea class="f-textarea" id="caseSummary" placeholder="Describe facts, timeline, and key issues…"></textarea></div>
-          <div class="form-group full"><label class="f-label">Evidence & Supporting Documents</label><textarea class="f-textarea" id="caseEvidence" placeholder="List key evidence, documents, witnesses…" style="min-height:70px;"></textarea></div>
         </div>
-        <div class="case-actions">
-          <button class="btn-primary" id="caseBtn" onclick="buildCase()">⚖️ Build Case Strategy</button>
-          <button class="btn-secondary" onclick="showToast('Draft saved!')">💾 Save Draft</button>
-          <button class="btn-secondary" onclick="exportText('caseOutputText','Case_Strategy')">📄 Export</button>
+        <div style="margin-bottom:14px">
+          <label>Describe Your Case Facts</label>
+          <textarea id="case-facts" rows="6" placeholder="Describe what happened, key dates, parties involved, evidence you have..."></textarea>
         </div>
-        <div class="ai-result" id="caseOutput" style="border-color:var(--gold);">
-          <div class="ai-result-title">⚖️ AI Case Strategy</div>
-          <div class="ai-result-text" id="caseOutputText"></div>
-          <div style="margin-top:10px;font-size:11px;color:var(--text-muted);">⚠ AI guidance only. Consult a qualified solicitor for official representation.</div>
+        <button class="btn btn-primary" onclick="buildCase()">⚖️ Build Case Strategy ↗</button>
+        <div id="case-result-box" style="margin-top:16px;display:none">
+          <div class="result-box" id="case-result"></div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-sm" onclick="downloadResult('case-result','Case_Strategy')">⬇ Download</button>
+            <button class="btn btn-ghost btn-sm" onclick="saveDoc('case')">💾 Save</button>
+            <button class="btn btn-ghost btn-sm" onclick="readAloud('case-result')">🔊 Read Aloud</button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- COMPLIANCE -->
-    <div class="panel" id="panel-compliance">
-      <div class="panel-hdr">
-        <h2>✅ Compliance Scanner</h2>
-        <p>AI-powered compliance check — GDPR, employment, corporate regulations</p>
-      </div>
-      <div class="compliance-body">
-        <div style="max-width:760px;">
-          <div class="f-label" style="margin-bottom:8px;">Describe your business or paste text to scan:</div>
-          <textarea class="f-textarea" id="compText" placeholder="e.g. We are a SaaS company in the EU, collecting user emails, processing payments, employing 12 remote staff…" style="width:100%;min-height:80px;"></textarea>
-          <button class="btn-primary" id="compBtn" style="margin-top:12px;" onclick="runScan()">🔍 Run AI Compliance Scan</button>
-          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="page" id="page-compliance">
+      <div class="panel">
+        <div class="panel-title">✅ Compliance Scanner</div>
+        <label style="margin-bottom:8px">Select Business Type</label>
+        <div class="biz-types" id="biz-types">
+          <button class="biz-btn active" onclick="selectBiz(this)">Sole Trader</button>
+          <button class="biz-btn" onclick="selectBiz(this)">Limited Company</button>
+          <button class="biz-btn" onclick="selectBiz(this)">E-Commerce</button>
+          <button class="biz-btn" onclick="selectBiz(this)">SaaS / Software</button>
+          <button class="biz-btn" onclick="selectBiz(this)">Healthcare</button>
+          <button class="biz-btn" onclick="selectBiz(this)">Finance</button>
         </div>
-        <div class="comp-checks" id="compChecks"></div>
-      </div>
-    </div>
-
-    <!-- TOOLS -->
-    <div class="panel" id="panel-tools">
-      <div class="panel-hdr">
-        <h2>🔧 Legal Tools</h2>
-        <p>AI-powered tools for contract analysis, risk assessment, and document intelligence</p>
-      </div>
-      <div class="tools-body">
-        <div class="tools-grid">
-          <div class="tool-card">
-            <div class="tc-icon">🔍</div><div class="tc-name">Contract Analyzer</div>
-            <div class="tc-desc">Upload contracts and get AI clause analysis, red flags, and risk scoring instantly via GPT-4.</div>
-            <button class="tc-btn" onclick="showPanel('upload',null);showToast('Upload your contract to analyze')">Open Tool →</button>
-          </div>
-          <div class="tool-card">
-            <div class="tc-icon">⚠️</div><div class="tc-name">Risk Assessment</div>
-            <div class="tc-desc">Identify legal risks in your documents and business practices with AI scoring.</div>
-            <button class="tc-btn" onclick="toolChat('Perform a comprehensive legal risk assessment for a standard commercial contract. List risks as High, Medium, Low with mitigation strategies.')">Run Assessment →</button>
-          </div>
-          <div class="tool-card">
-            <div class="tc-icon">📅</div><div class="tc-name">Extract Deadlines</div>
-            <div class="tc-desc">Automatically extract all dates, deadlines, and obligations from legal documents.</div>
-            <button class="tc-btn" onclick="showPanel('upload',null);showToast('Upload document to extract deadlines')">Open Tool →</button>
-          </div>
-          <div class="tool-card">
-            <div class="tc-icon">👥</div><div class="tc-name">Identify Parties</div>
-            <div class="tc-desc">Identify all parties, roles, and signatories within legal documents automatically.</div>
-            <button class="tc-btn" onclick="showPanel('upload',null);showToast('Upload document to identify parties')">Open Tool →</button>
-          </div>
-          <div class="tool-card">
-            <div class="tc-icon">📊</div><div class="tc-name">Clause Library</div>
-            <div class="tc-desc">Generate ready-to-use legal clauses for any contract type using GPT-4.</div>
-            <button class="tc-btn" onclick="toolChat('Generate 6 essential legal clauses for a commercial service agreement: 1) Limitation of Liability, 2) Confidentiality, 3) Termination, 4) Dispute Resolution, 5) Governing Law, 6) Force Majeure. Make each clause professional and comprehensive.')">Generate Clauses →</button>
-          </div>
-          <div class="tool-card">
-            <div class="tc-icon">🌍</div><div class="tc-name">Jurisdiction Checker</div>
-            <div class="tc-desc">Verify legal requirements across 40+ jurisdictions with AI-powered guidance.</div>
-            <button class="tc-btn" onclick="toolChat('Summarise key legal requirements for operating a technology business in England & Wales, Netherlands, Germany, and France — covering employment law, data protection, and corporate compliance.')">Check Jurisdictions →</button>
+        <div style="margin-bottom:14px">
+          <label>Describe Your Business Activities</label>
+          <textarea id="compliance-desc" rows="5" placeholder="What does your business do? What data do you collect?"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="runCompliance()">✅ Run Compliance Scan ↗</button>
+        <div id="compliance-result-box" style="margin-top:16px;display:none">
+          <div class="result-box" id="compliance-result"></div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-sm" onclick="downloadResult('compliance-result','Compliance_Report')">⬇ Download</button>
           </div>
         </div>
       </div>
     </div>
 
-  </main>
+    <!-- CONTRACT ANALYZER -->
+    <div class="page" id="page-analyze">
+      <div class="panel">
+        <div class="panel-title">🔍 Contract Analyzer</div>
+        <textarea id="analyze-text" rows="8" placeholder="Paste your contract text here..."></textarea>
+        <div style="margin-top:10px"><button class="btn btn-primary" onclick="runTool('analyze')">🔍 Analyze ↗</button></div>
+        <div id="analyze-result-box" style="margin-top:16px;display:none">
+          <div class="result-box" id="analyze-result"></div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-sm" onclick="downloadResult('analyze-result','Contract_Analysis')">⬇ Download</button>
+            <button class="btn btn-ghost btn-sm" onclick="readAloud('analyze-result')">🔊 Read Aloud</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RISK -->
+    <div class="page" id="page-risk">
+      <div class="panel">
+        <div class="panel-title">⚠️ Risk Assessment</div>
+        <textarea id="risk-text" rows="8" placeholder="Paste document text here..."></textarea>
+        <div style="margin-top:10px"><button class="btn btn-primary" onclick="runTool('risk')">⚠️ Assess Risks ↗</button></div>
+        <div id="risk-result-box" style="margin-top:16px;display:none">
+          <div class="result-box" id="risk-result"></div>
+          <div class="result-actions"><button class="btn btn-ghost btn-sm" onclick="downloadResult('risk-result','Risk_Assessment')">⬇ Download</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEADLINES -->
+    <div class="page" id="page-deadlines">
+      <div class="panel">
+        <div class="panel-title">📅 Extract Deadlines</div>
+        <textarea id="deadlines-text" rows="8" placeholder="Paste document text here..."></textarea>
+        <div style="margin-top:10px"><button class="btn btn-primary" onclick="runTool('deadlines')">📅 Extract ↗</button></div>
+        <div id="deadlines-result-box" style="margin-top:16px;display:none">
+          <div class="result-box" id="deadlines-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTIES -->
+    <div class="page" id="page-parties">
+      <div class="panel">
+        <div class="panel-title">👥 Identify Parties</div>
+        <textarea id="parties-text" rows="8" placeholder="Paste document text here..."></textarea>
+        <div style="margin-top:10px"><button class="btn btn-primary" onclick="runTool('parties')">👥 Identify ↗</button></div>
+        <div id="parties-result-box" style="margin-top:16px;display:none">
+          <div class="result-box" id="parties-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEMPLATES -->
+    <div class="page" id="page-templates">
+      <div class="panel">
+        <div class="panel-title">📋 500+ Legal Templates</div>
+        <input type="text" id="tmpl-search" placeholder="Search templates..." oninput="filterTemplates()" style="margin-bottom:14px"/>
+        <div class="tmpl-grid" id="tmpl-grid"></div>
+      </div>
+    </div>
+
+    <!-- VOICE WRITER -->
+    <div class="page" id="page-voicewriter">
+      <div class="panel">
+        <div class="panel-title">🎤 Voice Writer</div>
+        <div style="text-align:center;padding:20px 0">
+          <button class="voice-btn idle" id="voice-btn" onclick="toggleVoice()">🎤</button>
+          <div style="margin-top:10px;font-size:12px;color:var(--muted)" id="voice-status">Click to start recording</div>
+        </div>
+        <label>Transcribed Text</label>
+        <textarea id="voice-text" rows="6" placeholder="Your speech will appear here..."></textarea>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="sendVoiceToChat()">💬 Send to Chat</button>
+          <button class="btn btn-ghost btn-sm" onclick="sendVoiceToDoc()">📄 Send to Doc Generator</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('voice-text').value=''">🗑 Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOICE READER -->
+    <div class="page" id="page-voicereader">
+      <div class="panel">
+        <div class="panel-title">🔊 Voice Reader</div>
+        <div style="margin-bottom:14px">
+          <label>Language</label>
+          <select id="reader-lang">
+            <option value="en-GB">English (UK)</option><option value="en-US">English (US)</option>
+            <option value="de-DE">Deutsch</option><option value="fr-FR">Français</option>
+            <option value="nl-NL">Nederlands</option>
+          </select>
+        </div>
+        <label>Text to Read</label>
+        <textarea id="reader-text" rows="8" placeholder="Paste any legal text here and press Play..."></textarea>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="startReading()">🔊 Play</button>
+          <button class="btn btn-ghost" onclick="stopReading()">⏹ Stop</button>
+          <button class="btn btn-ghost" onclick="pauseReading()">⏸ Pause</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAVED DOCS -->
+    <div class="page" id="page-saved">
+      <div class="panel">
+        <div class="panel-title">💾 Saved Documents</div>
+        <div id="saved-list"></div>
+        <div id="saved-empty" style="text-align:center;padding:30px;color:var(--muted);font-size:13px">No saved documents yet.</div>
+      </div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="page" id="page-payments">
+      <div class="panel">
+        <div class="panel-title">💳 Book a Consultation</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Choose a consultation type and pay securely via Stripe. You will receive a meeting link by email after payment.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px">
+          <div class="card" onclick="selectPlan('30min',50)" id="plan-30min">
+            <div class="c-icon">⏱️</div>
+            <div class="c-title">30 Minute Consultation</div>
+            <div style="font-size:20px;font-weight:800;color:var(--accent);margin:8px 0">€50</div>
+            <div class="c-desc">Quick legal advice, document review, or Q&A session</div>
+          </div>
+          <div class="card" onclick="selectPlan('1hour',99)" id="plan-1hour">
+            <div class="c-icon">📋</div>
+            <div class="c-title">1 Hour Consultation</div>
+            <div style="font-size:20px;font-weight:800;color:var(--accent);margin:8px 0">€99</div>
+            <div class="c-desc">In-depth legal consultation on any matter</div>
+          </div>
+          <div class="card" onclick="selectPlan('contract-review',149)" id="plan-contract-review">
+            <div class="c-icon">🔍</div>
+            <div class="c-title">Contract Review</div>
+            <div style="font-size:20px;font-weight:800;color:var(--accent);margin:8px 0">€149</div>
+            <div class="c-desc">Full contract analysis, risk identification & recommendations</div>
+          </div>
+          <div class="card" onclick="selectPlan('2hour',179)" id="plan-2hour">
+            <div class="c-icon">⚖️</div>
+            <div class="c-title">2 Hour Consultation</div>
+            <div style="font-size:20px;font-weight:800;color:var(--accent);margin:8px 0">€179</div>
+            <div class="c-desc">Extended session for complex legal matters</div>
+          </div>
+          <div class="card" onclick="selectPlan('case-strategy',249)" id="plan-case-strategy">
+            <div class="c-icon">🏆</div>
+            <div class="c-title">Full Case Strategy</div>
+            <div style="font-size:20px;font-weight:800;color:var(--gold);margin:8px 0">€249</div>
+            <div class="c-desc">Complete case analysis, strategy, and action plan</div>
+            <div class="c-badge">PREMIUM</div>
+          </div>
+        </div>
+        <div id="payment-form" style="display:none">
+          <div style="background:var(--bg);border:1px solid var(--accent);border-radius:10px;padding:20px;margin-bottom:16px">
+            <div class="panel-title" style="font-size:13px">Selected: <span id="selected-plan-label" style="color:var(--accent)"></span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div><label>Your Full Name</label><input type="text" id="pay-name" placeholder="John Smith"/></div>
+            <div><label>Your Email</label><input type="email" id="pay-email" placeholder="john@example.com"/></div>
+          </div>
+          <div style="margin-bottom:14px">
+            <label>Preferred Meeting Date</label>
+            <input type="date" id="pay-date"/>
+          </div>
+          <div style="margin-bottom:14px">
+            <label>What do you need help with?</label>
+            <textarea id="pay-notes" rows="3" placeholder="Briefly describe your legal issue or question..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="processPayment()">💳 Pay Securely with Stripe</button>
+            <button class="btn btn-ghost" onclick="document.getElementById('payment-form').style.display='none'">Cancel</button>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--muted)">🔒 Secured by Stripe · Your card details are never stored on our servers</div>
+        </div>
+        <div id="payment-success" style="display:none;text-align:center;padding:30px">
+          <div style="font-size:48px;margin-bottom:16px">✅</div>
+          <h3 style="font-family:'Syne',sans-serif;margin-bottom:8px">Payment Successful!</h3>
+          <p style="color:var(--muted);font-size:13px">You will receive a meeting link at your email shortly. Check your inbox.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT PORTAL -->
+    <div class="page" id="page-portal">
+      <div class="panel">
+        <div class="panel-title">👤 Client Portal</div>
+        <!-- Login/Register -->
+        <div id="portal-auth" style="max-width:400px;margin:0 auto">
+          <div style="display:flex;gap:8px;margin-bottom:20px">
+            <button class="btn btn-primary btn-sm" id="tab-login" onclick="switchPortalTab('login')">Login</button>
+            <button class="btn btn-ghost btn-sm" id="tab-register" onclick="switchPortalTab('register')">Register</button>
+          </div>
+          <div id="portal-login">
+            <div style="margin-bottom:12px"><label>Email</label><input type="email" id="portal-email" placeholder="your@email.com"/></div>
+            <div style="margin-bottom:14px"><label>Password</label><input type="password" id="portal-password" placeholder="Your password"/></div>
+            <button class="btn btn-primary" style="width:100%" onclick="portalLogin()">🔑 Login to Portal</button>
+          </div>
+          <div id="portal-register" style="display:none">
+            <div style="margin-bottom:12px"><label>Full Name</label><input type="text" id="reg-name" placeholder="John Smith"/></div>
+            <div style="margin-bottom:12px"><label>Email</label><input type="email" id="reg-email" placeholder="your@email.com"/></div>
+            <div style="margin-bottom:14px"><label>Password</label><input type="password" id="reg-password" placeholder="Create a password"/></div>
+            <button class="btn btn-primary" style="width:100%" onclick="portalRegister()">✅ Create Account</button>
+          </div>
+          <div id="portal-auth-error" style="margin-top:10px;font-size:12px;color:var(--danger);display:none"></div>
+        </div>
+        <!-- Portal Dashboard -->
+        <div id="portal-dashboard" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div>
+              <div style="font-weight:700;font-size:15px" id="portal-welcome">Welcome back!</div>
+              <div style="font-size:12px;color:var(--muted)" id="portal-email-display"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="portalLogout()">Logout</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button class="btn btn-primary btn-sm" onclick="loadPortalDocs()">📄 My Documents</button>
+            <button class="btn btn-ghost btn-sm" onclick="gotoPageById('payments','💳 Book Consultation')">💳 Book Session</button>
+          </div>
+          <div id="portal-docs-list"></div>
+          <div id="portal-no-docs" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No documents yet. Your legal documents will appear here after consultations.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script>
-const BACKEND = 'https://freelance.nnit.de';
-let langSuffix = 'Respond in English.';
-let chatHistory = [];
-let uploadedFiles = [];
+const API = 'https://nnit-legal-ai-production.up.railway.app/api/legal-ai'
 
-window.onload = () => {
-  document.getElementById('aiLabel').textContent = 'GPT-4 ACTIVE';
-  // Verify backend is reachable
-  fetch(BACKEND + '/health').then(r => {
-    if (r.ok) showToast('✓ Connected to NNIT backend');
-  }).catch(() => showToast('⚠ Backend unreachable — check Railway'));
-};
+// ── NAV ──
+const PAGE_TITLES = {dashboard:'🏠 Dashboard',chat:'💬 AI Legal Chat',upload:'📎 Upload Documents',camera:'📷 Camera Scanner',docgen:'📄 Document Generator',case:'⚖️ Case Builder',compliance:'✅ Compliance Scanner',meeting:'📹 Video Meetings',schedule:'📅 Schedule Meeting',meetinghistory:'📋 Meeting History',analyze:'🔍 Contract Analyzer',risk:'⚠️ Risk Assessment',deadlines:'📅 Extract Deadlines',parties:'👥 Identify Parties',templates:'📋 Templates',voicewriter:'🎤 Voice Writer',voicereader:'🔊 Voice Reader',saved:'💾 Saved Documents'}
 
-async function callGPT(messages, onStream) {
-  const res = await fetch(BACKEND + '/api/ai/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, stream: !!onStream })
-  });
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    const msg = e?.error || e?.message || 'Backend error ' + res.status;
-    showToast('Error: ' + msg);
-    throw new Error(msg);
+function gotoPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  document.getElementById('page-'+id).classList.add('active')
+  if(el) el.classList.add('active')
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[id]||id
+  if(id==='templates') renderTemplates()
+  if(id==='saved') renderSaved()
+  if(id==='schedule') renderUpcoming()
+  if(id==='meetinghistory') renderMeetingHistory()
+}
+function gotoPageById(id,title){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  document.getElementById('page-'+id).classList.add('active')
+  document.getElementById('topbar-title').textContent = title
+  if(id==='templates') renderTemplates()
+  if(id==='meetinghistory') renderMeetingHistory()
+}
+
+// ── API ──
+async function callAI(messages, systemPrompt){
+  const res = await fetch(API, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages,systemPrompt,max_tokens:1500})})
+  const data = await res.json()
+  if(data.error) throw new Error(data.error)
+  return data.result
+}
+function loading(){return '<span class="loading"><span></span><span></span><span></span></span> Thinking...'}
+
+// ── BIOMETRIC ──
+let biometricRegistered = localStorage.getItem('nnit-biometric') === 'true'
+function updateBioChip(){
+  const chip = document.getElementById('bio-status-chip')
+  if(biometricRegistered){chip.className='bio-chip unlocked';chip.textContent='🔓 Bio Active'}
+  else{chip.className='bio-chip locked';chip.textContent='🔒 Secure Login'}
+}
+function showBioModal(){
+  document.getElementById('bio-modal').classList.add('show')
+}
+function closeBioModal(){
+  document.getElementById('bio-modal').classList.remove('show')
+}
+async function registerBiometric(){
+  if(!window.PublicKeyCredential){
+    document.getElementById('bio-status').textContent='WebAuthn not supported in this browser. Try Chrome or Safari.'
+    return
   }
-  if (onStream) {
-    // Try streaming first, fall back to full response
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('text/event-stream')) {
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let full = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        for (const line of dec.decode(value).split('\n').filter(l => l.startsWith('data: '))) {
-          const d = line.slice(6);
-          if (d === '[DONE]') break;
-          try { const c = JSON.parse(d)?.choices?.[0]?.delta?.content || ''; full += c; onStream(full); } catch {}
-        }
+  try{
+    document.getElementById('bio-status').textContent='Requesting biometric...'
+    const challenge = new Uint8Array(32)
+    crypto.getRandomValues(challenge)
+    const credential = await navigator.credentials.create({
+      publicKey:{
+        challenge,
+        rp:{name:'NNIT Legal AI',id:location.hostname},
+        user:{id:new Uint8Array(16),name:'solomon@nnit.com',displayName:'Solomon Omomeje'},
+        pubKeyCredParams:[{alg:-7,type:'public-key'},{alg:-257,type:'public-key'}],
+        authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},
+        timeout:60000,
+        attestation:'none'
       }
-      return full;
-    } else {
-      // Backend returns full JSON
-      const data = await res.json();
-      const text = data?.choices?.[0]?.message?.content || data?.reply || data?.message || data?.response || JSON.stringify(data);
-      onStream(text);
-      return text;
+    })
+    if(credential){
+      localStorage.setItem('nnit-biometric','true')
+      localStorage.setItem('nnit-bio-id',btoa(String.fromCharCode(...new Uint8Array(credential.rawId))))
+      biometricRegistered=true
+      document.getElementById('bio-icon').textContent='✅'
+      document.getElementById('bio-title').textContent='Biometric Registered!'
+      document.getElementById('bio-desc').textContent='Your fingerprint/face ID is now linked to NNIT Legal AI'
+      document.getElementById('bio-status').textContent=''
+      updateBioChip()
+      setTimeout(closeBioModal,2000)
+    }
+  }catch(e){
+    document.getElementById('bio-status').textContent='Error: '+e.message
+  }
+}
+async function verifyBiometric(){
+  if(!biometricRegistered) return true
+  try{
+    const challenge = new Uint8Array(32)
+    crypto.getRandomValues(challenge)
+    await navigator.credentials.get({publicKey:{challenge,userVerification:'required',timeout:60000}})
+    return true
+  }catch(e){return false}
+}
+
+// ── MEETING ──
+let jitsiApi = null
+let meetingRecorder = null
+let meetingChunks = []
+let isRecording = false
+let transcriptLines = []
+let meetingSpeechRecognition = null
+
+function generateRoomId(){
+  return 'nnit-legal-' + Math.random().toString(36).substr(2,8)
+}
+
+async function startMeeting(){
+  const roomName = document.getElementById('room-name').value.trim() || generateRoomId()
+  const displayName = document.getElementById('display-name').value.trim() || 'NNIT Legal Host'
+  const enableTranscription = document.getElementById('enable-transcription').checked
+
+  document.getElementById('meeting-setup').style.display='none'
+  document.getElementById('meeting-active').style.display='block'
+  document.getElementById('live-indicator').style.display='inline-flex'
+
+  if(typeof JitsiMeetExternalAPI === 'undefined'){
+    document.getElementById('jitsi-container').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);flex-direction:column;gap:12px"><div style="font-size:48px">📹</div><div>Loading Jitsi Meet...</div><div style="font-size:12px">If it fails, please allow popups or check your connection</div></div>'
+    setTimeout(()=>loadJitsi(roomName,displayName),2000)
+  } else {
+    loadJitsi(roomName,displayName)
+  }
+
+  if(enableTranscription) startMeetingTranscription()
+
+  const meetingData = {id:Date.now(),room:roomName,type:document.getElementById('meeting-type').value,date:new Date().toISOString(),transcript:[],summary:''}
+  localStorage.setItem('nnit-current-meeting',JSON.stringify(meetingData))
+}
+
+function loadJitsi(roomName,displayName){
+  try{
+    jitsiApi = new JitsiMeetExternalAPI('meet.jit.si',{
+      roomName,
+      parentNode:document.getElementById('jitsi-container'),
+      width:'100%',
+      height:480,
+      userInfo:{displayName},
+      configOverwrite:{startWithAudioMuted:false,startWithVideoMuted:false,enableWelcomePage:false},
+      interfaceConfigOverwrite:{SHOW_JITSI_WATERMARK:false,SHOW_WATERMARK_FOR_GUESTS:false,TOOLBAR_BUTTONS:['microphone','camera','closedcaptions','desktop','hangup','chat','recording','participants-pane','tileview','select-background']}
+    })
+    jitsiApi.addEventListener('readyToClose',endMeeting)
+  }catch(e){
+    document.getElementById('jitsi-container').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);flex-direction:column;gap:8px"><div style="font-size:48px">📹</div><div style="font-size:14px;font-weight:600">Meeting Room Ready</div><div style="font-size:12px;color:var(--accent)">Room: '+roomName+'</div><div style="font-size:11px;margin-top:8px">Share this room name with participants</div></div>'
+  }
+}
+
+function startMeetingTranscription(){
+  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition
+  meetingSpeechRecognition = new SR()
+  meetingSpeechRecognition.continuous=true
+  meetingSpeechRecognition.interimResults=true
+  meetingSpeechRecognition.lang='en-GB'
+  meetingSpeechRecognition.onresult = e => {
+    let final=''
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final+=e.results[i][0].transcript
+    }
+    if(final){
+      transcriptLines.push({time:new Date().toLocaleTimeString(),text:final.trim()})
+      const box=document.getElementById('transcript-box')
+      const line=document.createElement('div')
+      line.className='transcript-line speaker'
+      line.textContent=new Date().toLocaleTimeString()+': '+final.trim()
+      box.appendChild(line)
+      box.scrollTop=box.scrollHeight
     }
   }
-  const data = await res.json();
-  return data?.choices?.[0]?.message?.content || data?.reply || data?.message || data?.response || JSON.stringify(data);
+  meetingSpeechRecognition.start()
 }
 
-function sysPrompt() {
-  return 'You are NNIT Legal AI, a professional expert legal assistant. Provide accurate, detailed, professional legal guidance. Always clarify that advice is informational only and users should consult a licensed attorney for official representation. ' + langSuffix;
+function toggleRecording(){
+  if(!isRecording) startScreenRecording()
+  else stopScreenRecording()
 }
 
-function showPanel(id, navEl) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + id).classList.add('active');
-  if (navEl) { document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); navEl.classList.add('active'); }
+async function startScreenRecording(){
+  try{
+    const stream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:true})
+    meetingRecorder = new MediaRecorder(stream)
+    meetingChunks=[]
+    meetingRecorder.ondataavailable = e => meetingChunks.push(e.data)
+    meetingRecorder.onstop = () => {
+      const blob = new Blob(meetingChunks,{type:'video/webm'})
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href=url;a.download='NNIT_Meeting_'+Date.now()+'.webm';a.click()
+    }
+    meetingRecorder.start()
+    isRecording=true
+    document.getElementById('rec-btn').textContent='⏹ Stop Recording'
+    document.getElementById('rec-btn').className='btn btn-danger btn-sm'
+  }catch(e){alert('Recording error: '+e.message)}
 }
 
-function setLang(btn, suffix) {
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  langSuffix = suffix;
-  chatHistory = [];
-  showToast('Language: ' + btn.textContent.trim());
+function stopScreenRecording(){
+  if(meetingRecorder) meetingRecorder.stop()
+  isRecording=false
+  document.getElementById('rec-btn').textContent='🔴 Start Recording'
+  document.getElementById('rec-btn').className='btn btn-warn btn-sm'
 }
 
-async function sendChat() {
-  const inp = document.getElementById('chatInput');
-  const text = inp.value.trim();
-  if (!text) return;
-  inp.value = ''; inp.style.height = 'auto';
-  addUserMsg(text);
-  chatHistory.push({ role: 'user', content: text });
-  await streamReply();
+async function generateMeetingSummary(){
+  if(transcriptLines.length===0){
+    alert('No transcript available yet. Start speaking during the meeting.')
+    return
+  }
+  const transcriptText = transcriptLines.map(t=>t.time+': '+t.text).join('\n')
+  const box=document.getElementById('meeting-summary-result')
+  document.getElementById('meeting-summary-box').style.display='block'
+  box.innerHTML=loading()
+  try{
+    const result = await callAI([{role:'user',content:'Meeting Transcript:\n'+transcriptText+'\n\nPlease provide: 1) Executive Summary 2) Key Legal Points Discussed 3) Action Items 4) Follow-up Required 5) Any legal risks or concerns mentioned'}],'You are a legal meeting analyst. Summarize legal meetings clearly and professionally.')
+    box.textContent=result
+  }catch(e){box.textContent='Error: '+e.message}
 }
 
-function addUserMsg(text) {
-  const c = document.getElementById('chatMessages');
-  const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  const d = document.createElement('div');
-  d.className = 'msg user';
-  d.innerHTML = `<div class="msg-av user">👤</div><div><div class="msg-bubble">${esc(text)}</div><div class="msg-time">You · ${now}</div></div>`;
-  c.appendChild(d); c.scrollTop = c.scrollHeight;
+function saveMeetingSummary(){
+  const summary = document.getElementById('meeting-summary-result').textContent
+  const currentMeeting = JSON.parse(localStorage.getItem('nnit-current-meeting')||'{}')
+  currentMeeting.summary = summary
+  currentMeeting.transcript = transcriptLines
+  const history = JSON.parse(localStorage.getItem('nnit-meeting-history')||'[]')
+  history.unshift(currentMeeting)
+  localStorage.setItem('nnit-meeting-history',JSON.stringify(history))
+  alert('Meeting summary saved!')
 }
 
-async function streamReply() {
-  const c = document.getElementById('chatMessages');
-  const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  const btn = document.getElementById('sendBtn');
-  btn.disabled = true;
+function endMeeting(){
+  if(jitsiApi){jitsiApi.dispose();jitsiApi=null}
+  if(meetingSpeechRecognition) meetingSpeechRecognition.stop()
+  if(isRecording) stopScreenRecording()
+  document.getElementById('live-indicator').style.display='none'
+  if(transcriptLines.length>0) generateMeetingSummary()
+  document.getElementById('meeting-setup').style.display='block'
+  document.getElementById('meeting-active').style.display='none'
+}
 
-  const td = document.createElement('div');
-  td.className = 'msg'; td.id = 'typingDiv';
-  td.innerHTML = `<div class="msg-av ai">⚖️</div><div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
-  c.appendChild(td); c.scrollTop = c.scrollHeight;
+function downloadTranscript(){
+  if(transcriptLines.length===0){alert('No transcript yet');return}
+  const text = transcriptLines.map(t=>t.time+': '+t.text).join('\n')
+  const blob=new Blob([text],{type:'text/plain'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Meeting_Transcript_'+Date.now()+'.txt';a.click()
+}
 
+function sendMeetingChat(){
+  const inp=document.getElementById('meeting-chat-input')
+  const text=inp.value.trim()
+  if(!text) return
+  const chat=document.getElementById('meeting-chat')
+  const msg=document.createElement('div')
+  msg.style.cssText='margin-bottom:6px;font-size:12px;padding:4px 8px;background:rgba(79,124,255,.1);border-radius:4px'
+  msg.textContent='You: '+text
+  chat.appendChild(msg)
+  chat.scrollTop=chat.scrollHeight
+  inp.value=''
+}
+
+function copyInviteLink(){
+  const roomName=document.getElementById('room-name').value.trim()||'nnit-legal-consultation'
+  const link='https://meet.jit.si/'+roomName
+  navigator.clipboard.writeText(link)
+  document.getElementById('invite-copied').style.display='block'
+  setTimeout(()=>document.getElementById('invite-copied').style.display='none',3000)
+}
+
+// ── SCHEDULE ──
+function scheduleMeeting(){
+  const client=document.getElementById('sched-client').value.trim()
+  const email=document.getElementById('sched-email').value.trim()
+  const date=document.getElementById('sched-date').value
+  const time=document.getElementById('sched-time').value
+  const duration=document.getElementById('sched-duration').value
+  const type=document.getElementById('sched-type').value
+  const agenda=document.getElementById('sched-agenda').value
+
+  if(!client||!date||!time){alert('Please fill in client name, date and time');return}
+
+  const roomName='nnit-'+client.toLowerCase().replace(/\s+/g,'-')+'-'+date.replace(/-/g,'')
+  const meeting={id:Date.now(),client,email,date,time,duration,type,agenda,room:roomName,status:'scheduled'}
+  const meetings=JSON.parse(localStorage.getItem('nnit-scheduled')||'[]')
+  meetings.push(meeting)
+  localStorage.setItem('nnit-scheduled',JSON.stringify(meetings))
+
+  const box=document.getElementById('sched-result-box')
+  document.getElementById('sched-result').style.display='block'
+  box.innerHTML=`✅ Meeting scheduled!\n\nClient: ${client}\nDate: ${date} at ${time}\nDuration: ${duration}\nType: ${type}\nRoom Link: https://meet.jit.si/${roomName}\n\nShare this link with your client: https://meet.jit.si/${roomName}`
+
+  renderUpcoming()
+}
+
+async function generateAgenda(){
+  const type=document.getElementById('sched-type').value
+  const client=document.getElementById('sched-client').value||'the client'
+  const box=document.getElementById('sched-result-box')
+  document.getElementById('sched-result').style.display='block'
+  box.innerHTML=loading()
+  try{
+    const result=await callAI([{role:'user',content:`Generate a professional meeting agenda for a ${type} with ${client}. Include opening, key discussion points, action items section, and closing.`}])
+    box.textContent=result
+    document.getElementById('sched-agenda').value=result
+  }catch(e){box.textContent='Error: '+e.message}
+}
+
+function renderUpcoming(){
+  const meetings=JSON.parse(localStorage.getItem('nnit-scheduled')||'[]')
+  const list=document.getElementById('upcoming-meetings-list')
+  const empty=document.getElementById('no-upcoming')
+  if(!meetings.length){list.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none'
+  list.innerHTML=meetings.sort((a,b)=>a.date>b.date?1:-1).map(m=>`
+    <div class="room-card">
+      <div>
+        <div class="r-name">📅 ${m.client} — ${m.type}</div>
+        <div style="font-size:11px;color:var(--muted)">${m.date} at ${m.time} · ${m.duration}</div>
+        <div style="font-size:11px;color:var(--accent);margin-top:2px">🔗 meet.jit.si/${m.room}</div>
+      </div>
+      <span class="r-status scheduled">Scheduled</span>
+      <button class="btn btn-primary btn-sm" onclick="joinScheduled('${m.room}')">Join</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteScheduled(${m.id})">Delete</button>
+    </div>`).join('')
+}
+
+function joinScheduled(room){
+  document.getElementById('room-name').value=room
+  gotoPageById('meeting','📹 Video Meetings')
+  startMeeting()
+}
+
+function deleteScheduled(id){
+  let meetings=JSON.parse(localStorage.getItem('nnit-scheduled')||'[]')
+  meetings=meetings.filter(m=>m.id!==id)
+  localStorage.setItem('nnit-scheduled',JSON.stringify(meetings))
+  renderUpcoming()
+}
+
+function renderMeetingHistory(){
+  const history=JSON.parse(localStorage.getItem('nnit-meeting-history')||'[]')
+  const list=document.getElementById('meeting-history-list')
+  const empty=document.getElementById('no-history')
+  if(!history.length){list.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none'
+  list.innerHTML=history.map(m=>`
+    <div class="meeting-history-row">
+      <div class="mh-title">📹 ${m.type||'Legal Meeting'} — ${m.room||''}</div>
+      <div class="mh-meta">${new Date(m.date||m.id).toLocaleString()} · ${(m.transcript||[]).length} transcript lines</div>
+      ${m.summary?'<div class="mh-summary">'+m.summary.substring(0,300)+'...</div>':'<div style="font-size:11px;color:var(--muted)">No AI summary saved</div>'}
+      <div style="margin-top:8px;display:flex;gap:6px">
+        ${m.transcript&&m.transcript.length?`<button class="btn btn-ghost btn-sm" onclick="downloadSavedTranscript(${m.id})">📄 Transcript</button>`:''}
+        ${m.summary?`<button class="btn btn-ghost btn-sm" onclick="viewSummary(${m.id})">🤖 Full Summary</button>`:''}
+      </div>
+    </div>`).join('')
+}
+
+function downloadSavedTranscript(id){
+  const history=JSON.parse(localStorage.getItem('nnit-meeting-history')||'[]')
+  const m=history.find(x=>x.id===id)
+  if(!m||!m.transcript) return
+  const text=m.transcript.map(t=>t.time+': '+t.text).join('\n')
+  const blob=new Blob([text],{type:'text/plain'})
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Transcript_'+id+'.txt';a.click()
+}
+
+function viewSummary(id){
+  const history=JSON.parse(localStorage.getItem('nnit-meeting-history')||'[]')
+  const m=history.find(x=>x.id===id)
+  if(m&&m.summary) alert(m.summary)
+}
+
+// ── CHAT ──
+let chatHistory=[]
+async function sendChat(){
+  const inp=document.getElementById('chat-input')
+  const text=inp.value.trim()
+  if(!text) return
+  inp.value=''
+  addMsg(text,'user')
+  chatHistory.push({role:'user',content:text})
+  const aiDiv=addMsg(loading(),'ai')
+  try{
+    const reply=await callAI(chatHistory,'You are NNIT Legal AI, a professional legal assistant.')
+    aiDiv.innerHTML='<div class="msg-label">NNIT Legal AI</div>'+reply
+    chatHistory.push({role:'assistant',content:reply})
+  }catch(e){aiDiv.innerHTML='<div class="msg-label">NNIT Legal AI</div>Error: '+e.message}
+}
+function quickChat(q){document.getElementById('chat-input').value=q;sendChat()}
+function addMsg(html,role){
+  const box=document.getElementById('chat-messages')
+  const d=document.createElement('div')
+  d.className='msg '+role
+  if(role==='ai') d.innerHTML='<div class="msg-label">NNIT Legal AI</div>'+html
+  else d.textContent=html
+  box.appendChild(d)
+  box.scrollTop=box.scrollHeight
+  return d
+}
+
+// ── UPLOAD ──
+function handleDrop(e){e.preventDefault();document.getElementById('dropzone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f) readFile(f)}
+function handleFile(inp){if(inp.files[0]) readFile(inp.files[0])}
+function readFile(f){const r=new FileReader();r.onload=e=>{document.getElementById('file-text').value=e.target.result;document.getElementById('file-content').style.display='block'};r.readAsText(f)}
+async function analyzeUpload(type){
+  const text=document.getElementById('file-text').value.trim()
+  if(!text) return
+  const box=document.getElementById('upload-result')
+  box.style.display='block';box.innerHTML=loading()
+  const prompts={analyze:'Analyze this contract thoroughly.',risk:'Identify all legal risks. Rate each High/Medium/Low.',deadlines:'Extract all dates, deadlines, and time-sensitive obligations.',parties:'Identify all parties, roles, obligations, and rights.'}
+  try{box.textContent=await callAI([{role:'user',content:prompts[type]+'\n\n'+text}])}catch(e){box.textContent='Error: '+e.message}
+}
+
+// ── CAMERA ──
+let camStream=null,facingMode='environment'
+async function startCamera(){
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode}})
+    document.getElementById('camera-video').srcObject=camStream
+    document.getElementById('cam-start-btn').style.display='none'
+    document.getElementById('cam-capture-btn').style.display='inline-flex'
+    document.getElementById('cam-switch-btn').style.display='inline-flex'
+    document.getElementById('cam-stop-btn').style.display='inline-flex'
+  }catch(e){alert('Camera error: '+e.message)}
+}
+function capturePhoto(){
+  const v=document.getElementById('camera-video'),c=document.getElementById('camera-canvas')
+  c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0)
+  document.getElementById('captured-img').src=c.toDataURL('image/jpeg')
+  document.getElementById('camera-result').style.display='block'
+  document.getElementById('camera-text').value='Image captured. Click Analyze Document to analyze using AI.'
+}
+function switchCamera(){facingMode=facingMode==='environment'?'user':'environment';stopCamera();startCamera()}
+function stopCamera(){if(camStream) camStream.getTracks().forEach(t=>t.stop());document.getElementById('camera-video').srcObject=null;document.getElementById('cam-start-btn').style.display='inline-flex';document.getElementById('cam-capture-btn').style.display='none';document.getElementById('cam-switch-btn').style.display='none';document.getElementById('cam-stop-btn').style.display='none'}
+async function analyzeCamera(type){
+  const text=document.getElementById('camera-text').value.trim()
+  const box=document.getElementById('camera-ai-result')
+  box.style.display='block';box.innerHTML=loading()
+  const prompts={analyze:'Analyze this scanned document as a legal document.',risk:'Identify all legal risks in this scanned document.'}
+  try{box.textContent=await callAI([{role:'user',content:prompts[type]+'\n\n'+text}])}catch(e){box.textContent='Error: '+e.message}
+}
+
+// ── DOC GENERATOR ──
+async function generateDocument(){
+  const type=document.getElementById('doc-type').value,biz=document.getElementById('doc-biz-type').value
+  const p1=document.getElementById('doc-party1').value,p2=document.getElementById('doc-party2').value
+  const details=document.getElementById('doc-details').value
+  const box=document.getElementById('doc-result'),wrap=document.getElementById('doc-result-box')
+  wrap.style.display='block';box.innerHTML=loading()
+  try{
+    const result=await callAI([{role:'user',content:`Generate a professional ${type} for a ${biz}.\nParty 1: ${p1||'Party A'}\nParty 2: ${p2||'Party B'}\nDetails: ${details}\nCreate a complete formal legal document.`}],'You are a professional legal document drafter.')
+    box.textContent=result
+  }catch(e){box.textContent='Error: '+e.message}
+}
+
+// ── CASE BUILDER ──
+async function buildCase(){
+  const facts=document.getElementById('case-facts').value.trim()
+  if(!facts){alert('Please describe your case facts');return}
+  const box=document.getElementById('case-result'),wrap=document.getElementById('case-result-box')
+  wrap.style.display='block';box.innerHTML=loading()
+  try{
+    const prompt=`Case Type: ${document.getElementById('case-type').value}\nPosition: ${document.getElementById('case-position').value}\nJurisdiction: ${document.getElementById('case-jurisdiction').value}\nFacts: ${facts}\n\nBuild comprehensive legal case strategy.`
+    box.textContent=await callAI([{role:'user',content:prompt}],'You are an expert legal strategist.')
+  }catch(e){box.textContent='Error: '+e.message}
+}
+
+// ── COMPLIANCE ──
+let selectedBiz='Sole Trader'
+function selectBiz(el){document.querySelectorAll('.biz-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');selectedBiz=el.textContent}
+async function runCompliance(){
+  const desc=document.getElementById('compliance-desc').value.trim()
+  if(!desc){alert('Please describe your business activities');return}
+  const box=document.getElementById('compliance-result'),wrap=document.getElementById('compliance-result-box')
+  wrap.style.display='block';box.innerHTML=loading()
+  try{
+    box.textContent=await callAI([{role:'user',content:`Business Type: ${selectedBiz}\nActivities: ${desc}\n\nProvide comprehensive compliance scan: GDPR, industry regulations, licenses, employment law, tax, data protection, action items.`}],'You are a compliance expert.')
+  }catch(e){box.textContent='Error: '+e.message}
+}
+
+// ── TOOLS ──
+async function runTool(type){
+  const text=document.getElementById(type+'-text').value.trim()
+  if(!text){alert('Please paste document text');return}
+  const box=document.getElementById(type+'-result'),wrap=document.getElementById(type+'-result-box')
+  wrap.style.display='block';box.innerHTML=loading()
+  const prompts={analyze:'Analyze this contract thoroughly. Cover key clauses, obligations, rights, termination, liability, payment, IP, and red flags.',risk:'Identify all legal risks. Rate each High/Medium/Low and suggest mitigation.',deadlines:'Extract ALL dates, deadlines, notice periods, renewal dates. Format as a clear list.',parties:'Identify all parties, their roles, obligations, rights, and liabilities.'}
+  try{box.textContent=await callAI([{role:'user',content:prompts[type]+'\n\n'+text}])}catch(e){box.textContent='Error: '+e.message}
+}
+
+// ── TEMPLATES ──
+const TEMPLATES=[
+  {icon:'📝',name:'NDA (Mutual)',cat:'Contracts'},{icon:'📝',name:'NDA (One-Way)',cat:'Contracts'},
+  {icon:'💼',name:'Employment Contract',cat:'Employment'},{icon:'💼',name:'Freelance Agreement',cat:'Employment'},
+  {icon:'🏢',name:'Service Agreement',cat:'Business'},{icon:'🏢',name:'Partnership Agreement',cat:'Business'},
+  {icon:'🔒',name:'Privacy Policy (GDPR)',cat:'Compliance'},{icon:'🔒',name:'Terms of Service',cat:'Compliance'},
+  {icon:'🏠',name:'Residential Lease',cat:'Property'},{icon:'🏠',name:'Commercial Lease',cat:'Property'},
+  {icon:'✉️',name:'Cease & Desist Letter',cat:'Letters'},{icon:'✉️',name:'Demand Letter',cat:'Letters'},
+  {icon:'💳',name:'Loan Agreement',cat:'Finance'},{icon:'💳',name:'Payment Plan',cat:'Finance'},
+  {icon:'🌐',name:'SaaS Agreement',cat:'Tech'},{icon:'🌐',name:'Software License',cat:'Tech'},
+  {icon:'⚖️',name:'Settlement Agreement',cat:'Dispute'},{icon:'🤝',name:'Consulting Agreement',cat:'Business'},
+  {icon:'📦',name:'Supply Agreement',cat:'Business'},{icon:'📦',name:'Distribution Agreement',cat:'Business'},
+]
+function renderTemplates(){
+  const q=(document.getElementById('tmpl-search')||{value:''}).value.toLowerCase()
+  document.getElementById('tmpl-grid').innerHTML=TEMPLATES.filter(t=>t.name.toLowerCase().includes(q)||t.cat.toLowerCase().includes(q)).map(t=>`<div class="tmpl-card" onclick="useTemplate('${t.name}')"><div class="t-icon">${t.icon}</div><div class="t-name">${t.name}</div><div class="t-cat">${t.cat}</div></div>`).join('')
+}
+function filterTemplates(){renderTemplates()}
+function useTemplate(name){document.getElementById('doc-type').value=name;gotoPageById('docgen','📄 Document Generator')}
+
+// ── VOICE WRITER ──
+let recognition=null,isRecordingVoice=false
+function toggleVoice(){if(isRecordingVoice) stopVoice();else startVoice()}
+function startVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition
+  if(!SR){alert('Voice recognition not supported. Try Chrome.');return}
+  recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-GB'
+  recognition.onresult=e=>{let final='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal) final+=e.results[i][0].transcript}
+    const ta=document.getElementById('voice-text');if(final) ta.value+=(ta.value?' ':'')+final}
+  recognition.onerror=()=>stopVoice()
+  recognition.start();isRecordingVoice=true
+  const btn=document.getElementById('voice-btn');btn.className='voice-btn recording';btn.textContent='⏹'
+  document.getElementById('voice-status').textContent='Recording... speak now'
+}
+function stopVoice(){if(recognition) recognition.stop();isRecordingVoice=false;document.getElementById('voice-btn').className='voice-btn idle';document.getElementById('voice-btn').textContent='🎤';document.getElementById('voice-status').textContent='Click to start recording'}
+function sendVoiceToChat(){const t=document.getElementById('voice-text').value.trim();if(!t) return;document.getElementById('chat-input').value=t;gotoPageById('chat','💬 AI Legal Chat');sendChat()}
+function sendVoiceToDoc(){const t=document.getElementById('voice-text').value.trim();if(!t) return;document.getElementById('doc-details').value=t;gotoPageById('docgen','📄 Document Generator')}
+
+// ── VOICE READER ──
+function startReading(){const text=document.getElementById('reader-text').value.trim();if(!text){alert('Please paste text');return};window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=document.getElementById('reader-lang').value;u.rate=0.9;window.speechSynthesis.speak(u)}
+function stopReading(){window.speechSynthesis.cancel()}
+function pauseReading(){if(window.speechSynthesis.paused) window.speechSynthesis.resume();else window.speechSynthesis.pause()}
+function readAloud(id){const text=document.getElementById(id).textContent.trim();if(!text) return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=0.9;window.speechSynthesis.speak(u)}
+
+// ── SAVED DOCS ──
+function saveDoc(source){
+  const sources={docgen:'doc-result',case:'case-result',analyze:'analyze-result'}
+  const text=document.getElementById(sources[source]||source)?.textContent?.trim()
+  if(!text) return
+  const docs=JSON.parse(localStorage.getItem('nnit-legal-docs')||'[]')
+  docs.unshift({id:Date.now(),title:(document.getElementById('doc-type')?.value||'Legal Document')+' — '+new Date().toLocaleDateString(),content:text,date:new Date().toISOString()})
+  localStorage.setItem('nnit-legal-docs',JSON.stringify(docs))
+  alert('Document saved!')
+}
+function renderSaved(){
+  const docs=JSON.parse(localStorage.getItem('nnit-legal-docs')||'[]')
+  const list=document.getElementById('saved-list'),empty=document.getElementById('saved-empty')
+  if(!docs.length){list.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none'
+  list.innerHTML=docs.map(d=>`<div class="doc-row"><span class="doc-name">📄 ${d.title}</span><span class="doc-date">${new Date(d.date).toLocaleDateString()}</span><button class="btn btn-danger btn-sm" onclick="deleteDoc(${d.id})">Delete</button></div>`).join('')
+}
+function deleteDoc(id){let docs=JSON.parse(localStorage.getItem('nnit-legal-docs')||'[]');docs=docs.filter(d=>d.id!==id);localStorage.setItem('nnit-legal-docs',JSON.stringify(docs));renderSaved()}
+
+// ── DOWNLOAD ──
+function downloadResult(id,name){const text=document.getElementById(id).textContent;const blob=new Blob([text],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'_'+Date.now()+'.txt';a.click()}
+function downloadDoc(){downloadResult('doc-result',document.getElementById('doc-type').value.replace(/\s+/g,'_'))}
+
+// ── PAYMENTS ──
+const STRIPE_PK = 'pk_test_51SSHA0GaTGR0sWqW73v2qCK6vbLfT4P1qHGFXhgppKIahQ31qu8VdwFf4VoS9xOqrxNXcnHj9QwTPVHR0sniDHRp00JwZlk1DB'
+const BACKEND = 'https://nnit-legal-ai-production.up.railway.app'
+let selectedPlanId = null
+
+function selectPlan(planId, price) {
+  selectedPlanId = planId
+  document.querySelectorAll('[id^="plan-"]').forEach(c => c.style.borderColor = '')
+  document.getElementById('plan-'+planId).style.borderColor = 'var(--accent)'
+  const labels = {'30min':'30 Minute Consultation — €50','1hour':'1 Hour Consultation — €99','contract-review':'Contract Review Session — €149','2hour':'2 Hour Consultation — €179','case-strategy':'Full Case Strategy Session — €249'}
+  document.getElementById('selected-plan-label').textContent = labels[planId]
+  document.getElementById('payment-form').style.display = 'block'
+  document.getElementById('payment-form').scrollIntoView({behavior:'smooth'})
+}
+
+async function processPayment() {
+  const name = document.getElementById('pay-name').value.trim()
+  const email = document.getElementById('pay-email').value.trim()
+  const date = document.getElementById('pay-date').value
+  const notes = document.getElementById('pay-notes').value
+  if (!name || !email) { alert('Please enter your name and email'); return }
+  if (!selectedPlanId) { alert('Please select a consultation type'); return }
   try {
-    const msgs = [{ role: 'system', content: sysPrompt() }, ...chatHistory.slice(-12)];
-    td.remove();
-    const ad = document.createElement('div');
-    ad.className = 'msg';
-    ad.innerHTML = `<div class="msg-av ai">⚖️</div><div><div class="msg-bubble" id="sb"></div><div class="msg-time">NNIT Legal AI · ${now}</div></div>`;
-    c.appendChild(ad);
-    const sb = document.getElementById('sb');
-    const reply = await callGPT(msgs, t => { sb.textContent = t; c.scrollTop = c.scrollHeight; });
-    sb.id = '';
-    chatHistory.push({ role: 'assistant', content: reply });
-  } catch { document.getElementById('typingDiv')?.remove(); }
-  btn.disabled = false;
+    const roomName = 'nnit-legal-' + name.toLowerCase().replace(/\s+/g,'-') + '-' + Date.now()
+    const res = await fetch(BACKEND+'/payments/create-checkout', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({priceId:selectedPlanId, clientName:name, clientEmail:email, meetingRoom:roomName, meetingDate:date})
+    })
+    const data = await res.json()
+    if (data.error) { alert('Payment error: '+data.error); return }
+    // Send email notification
+    try {
+      await fetch(BACKEND+'/email/meeting-invite', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({clientName:name, clientEmail:email, meetingDate:date, meetingTime:'TBD', duration:'See booking', type:selectedPlanId, roomName, agenda:notes})
+      })
+    } catch(e) { console.log('Email error:', e) }
+    // Redirect to Stripe checkout
+    window.location.href = data.url
+  } catch(e) { alert('Error: '+e.message) }
 }
 
-function quickPrompt(text) { document.getElementById('chatInput').value = text; showPanel('chat', document.querySelector('.nav-item')); sendChat(); }
-function toolChat(text) { showPanel('chat', document.querySelector('.nav-item')); document.getElementById('chatInput').value = text; sendChat(); }
-function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
-function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 130) + 'px'; }
-
-function handleFiles(e) { processFiles(Array.from(e.target.files)); }
-function dragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('drag'); }
-function dragLeave() { document.getElementById('dropzone').classList.remove('drag'); }
-function dropFile(e) { e.preventDefault(); document.getElementById('dropzone').classList.remove('drag'); processFiles(Array.from(e.dataTransfer.files)); }
-
-function processFiles(files) {
-  const list = document.getElementById('fileList');
-  const icons = { pdf:'📄', docx:'📝', doc:'📝', png:'🖼️', jpg:'🖼️', jpeg:'🖼️', txt:'📃', xlsx:'📊' };
-  files.forEach(f => {
-    if (f.size > 10485760) { showToast('File too large: ' + f.name); return; }
-    const ext = f.name.split('.').pop().toLowerCase();
-    const sz = f.size < 1024 ? f.size + ' B' : f.size < 1048576 ? (f.size/1024).toFixed(1) + ' KB' : (f.size/1048576).toFixed(1) + ' MB';
-    uploadedFiles.push({ name: f.name });
-    const d = document.createElement('div');
-    d.className = 'f-item'; d.dataset.name = f.name;
-    d.innerHTML = `<div class="f-icon">${icons[ext]||'📁'}</div><div class="f-name">${esc(f.name)}</div><div class="f-size">${sz}</div><button class="f-rm" onclick="this.parentElement.remove();uploadedFiles=uploadedFiles.filter(x=>x.name!=='${esc(f.name)}')">✕</button>`;
-    list.appendChild(d);
-    showToast('Uploaded: ' + f.name);
-  });
+// Check for payment success on load
+if(window.location.search.includes('payment=success')) {
+  setTimeout(() => {
+    gotoPageById('payments','💳 Book Consultation')
+    document.getElementById('payment-form').style.display='none'
+    document.getElementById('payment-success').style.display='block'
+  }, 500)
 }
 
-async function uploadAction(prompt) {
-  if (!uploadedFiles.length) { showToast('Please upload files first'); return; }
-  const names = uploadedFiles.map(f => f.name).join(', ');
-  const out = document.getElementById('uploadAnalysis');
-  out.innerHTML = `<div style="background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;padding:16px;margin-top:4px;"><div style="color:var(--gold);font-weight:600;margin-bottom:8px;"><span class="spinner"></span>Analysing ${esc(names)}…</div><div id="upStr" style="font-size:13px;color:var(--text-dim);line-height:1.8;white-space:pre-wrap;"></div></div>`;
+// ── CLIENT PORTAL ──
+let portalToken = localStorage.getItem('nnit-portal-token')
+let portalClient = JSON.parse(localStorage.getItem('nnit-portal-client')||'null')
+
+function switchPortalTab(tab) {
+  document.getElementById('portal-login').style.display = tab==='login'?'block':'none'
+  document.getElementById('portal-register').style.display = tab==='register'?'block':'none'
+  document.getElementById('tab-login').className = tab==='login'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm'
+  document.getElementById('tab-register').className = tab==='register'?'btn btn-primary btn-sm':'btn btn-ghost btn-sm'
+}
+
+async function portalLogin() {
+  const email = document.getElementById('portal-email').value.trim()
+  const password = document.getElementById('portal-password').value
+  if (!email||!password) { showPortalError('Please enter email and password'); return }
   try {
-    const msgs = [{ role:'system', content: sysPrompt() }, { role:'user', content:`The user has uploaded these legal documents: ${names}. ${prompt}. Provide a thorough professional legal analysis.` }];
-    const el = document.getElementById('upStr');
-    await callGPT(msgs, t => { el.textContent = t; });
-    out.querySelector('[style*="font-weight:600"]').innerHTML = `✓ Analysis complete`;
-  } catch {}
+    const res = await fetch(BACKEND+'/clients/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})})
+    const data = await res.json()
+    if (data.error) { showPortalError(data.error); return }
+    portalToken = data.token
+    portalClient = data.client
+    localStorage.setItem('nnit-portal-token', data.token)
+    localStorage.setItem('nnit-portal-client', JSON.stringify(data.client))
+    showPortalDashboard()
+  } catch(e) { showPortalError(e.message) }
 }
 
-async function generateDoc(type) {
-  const result = document.getElementById('docgenResult');
-  const title = document.getElementById('docgenTitle');
-  const text = document.getElementById('docgenText');
-  result.classList.add('show');
-  title.textContent = '⏳ Generating: ' + type + '…';
-  text.textContent = '';
-  result.scrollIntoView({ behavior:'smooth', block:'nearest' });
+async function portalRegister() {
+  const name = document.getElementById('reg-name').value.trim()
+  const email = document.getElementById('reg-email').value.trim()
+  const password = document.getElementById('reg-password').value
+  if (!name||!email||!password) { showPortalError('All fields required'); return }
   try {
-    const msgs = [
-      { role:'system', content: sysPrompt() },
-      { role:'user', content:`Generate a professional, comprehensive ${type} template. Include all standard clauses with proper legal language. Mark placeholder fields as [PARTY NAME], [DATE], [AMOUNT], [JURISDICTION] etc. Make it thorough and ready to use professionally.` }
-    ];
-    title.textContent = '📄 ' + type;
-    await callGPT(msgs, t => { text.textContent = t; });
-    showToast('Generated: ' + type);
-  } catch { title.textContent = 'Error — check API key'; }
+    const res = await fetch(BACKEND+'/clients/register', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})})
+    const data = await res.json()
+    if (data.error) { showPortalError(data.error); return }
+    portalToken = data.token
+    portalClient = data.client
+    localStorage.setItem('nnit-portal-token', data.token)
+    localStorage.setItem('nnit-portal-client', JSON.stringify(data.client))
+    showPortalDashboard()
+  } catch(e) { showPortalError(e.message) }
 }
 
-async function buildCase() {
-  const summary = document.getElementById('caseSummary').value.trim();
-  if (!summary) { showToast('Please enter a case summary'); return; }
-  const btn = document.getElementById('caseBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Building…';
-  const out = document.getElementById('caseOutput');
-  const outText = document.getElementById('caseOutputText');
-  out.classList.add('show'); outText.textContent = '';
-  out.scrollIntoView({ behavior:'smooth' });
+function showPortalError(msg) {
+  const el = document.getElementById('portal-auth-error')
+  el.textContent = msg; el.style.display = 'block'
+}
+
+function showPortalDashboard() {
+  document.getElementById('portal-auth').style.display = 'none'
+  document.getElementById('portal-dashboard').style.display = 'block'
+  document.getElementById('portal-welcome').textContent = 'Welcome, ' + (portalClient?.name||'Client') + '!'
+  document.getElementById('portal-email-display').textContent = portalClient?.email||''
+  loadPortalDocs()
+}
+
+async function loadPortalDocs() {
+  if (!portalToken) return
   try {
-    const p = `Build a comprehensive legal case strategy:\nCase Type: ${document.getElementById('caseType').value}\nJurisdiction: ${document.getElementById('caseJurisdiction').value}\nClient: ${document.getElementById('caseClient').value||'Client'}\nOpposing Party: ${document.getElementById('caseOpposing').value||'Opposing Party'}\nClaim Value: ${document.getElementById('caseValue').value ? '€'+document.getElementById('caseValue').value : 'Not specified'}\nCase Summary: ${summary}\nEvidence: ${document.getElementById('caseEvidence').value||'Not provided'}\n\nProvide: 1) Legal basis & applicable laws, 2) Case strengths & weaknesses, 3) Recommended strategy, 4) Key evidence to gather, 5) Pre-action steps, 6) Timeline, 7) Risk assessment, 8) Settlement considerations.`;
-    await callGPT([{ role:'system', content: sysPrompt() }, { role:'user', content: p }], t => { outText.textContent = t; });
-    showToast('Case strategy built!');
-  } catch { outText.textContent = 'Error — please check your API key.'; }
-  btn.disabled = false; btn.textContent = '⚖️ Build Case Strategy';
+    const res = await fetch(BACKEND+'/clients/documents', {headers:{'Authorization':'Bearer '+portalToken}})
+    const docs = await res.json()
+    const list = document.getElementById('portal-docs-list')
+    const empty = document.getElementById('portal-no-docs')
+    if (!docs.length) { list.innerHTML=''; empty.style.display='block'; return }
+    empty.style.display = 'none'
+    list.innerHTML = docs.map(d=>`<div class="doc-row"><span class="doc-name">📄 ${d.title}</span><span class="doc-date">${new Date(d.created_at).toLocaleDateString()}</span><button class="btn btn-danger btn-sm" onclick="deletePortalDoc(${d.id})">Delete</button></div>`).join('')
+  } catch(e) { console.log('Portal docs error:', e) }
 }
 
-async function runScan() {
-  const btn = document.getElementById('compBtn');
-  const fill = document.getElementById('progressFill');
-  const checks = document.getElementById('compChecks');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Scanning…';
-  fill.style.width = '0%'; checks.innerHTML = '';
-  let w = 0;
-  const iv = setInterval(() => { w += Math.random()*14; if (w>=88){w=88;clearInterval(iv);} fill.style.width=w+'%'; }, 280);
-  try {
-    const context = document.getElementById('compText').value.trim() || 'A general EU-based technology business collecting user data and employing staff';
-    const msgs = [
-      { role:'system', content:'You are a legal compliance expert. Return ONLY a valid JSON array, no other text.' },
-      { role:'user', content:`Perform a legal compliance scan for: "${context}"\n\nReturn exactly 6 items as a JSON array. Each item: {"label":"area name","status":"ok"|"warn"|"fail","description":"1-2 sentence assessment"}` }
-    ];
-    const reply = await callGPT(msgs, null);
-    clearInterval(iv); fill.style.width = '100%';
-    let items;
-    try { items = JSON.parse(reply.replace(/```json|```/g,'').trim()); }
-    catch { items = [
-      {label:'GDPR Data Processing',status:'ok',description:'Data processing practices appear compliant with GDPR requirements.'},
-      {label:'Cookie Compliance',status:'warn',description:'Cookie consent may require review under the ePrivacy Directive.'},
-      {label:'Employment Contracts',status:'ok',description:'Employment agreements include required statutory provisions.'},
-      {label:'Data Breach Protocol',status:'fail',description:'No documented 72-hour breach notification procedure identified.'},
-      {label:'Privacy Policy',status:'ok',description:'Privacy policy is comprehensive and GDPR-compliant.'},
-      {label:'Third-Party Vendor DPAs',status:'warn',description:'Some vendor data processing agreements require review and updating.'}
-    ]; }
-    const icons = { ok:'✓', warn:'!', fail:'✗' };
-    items.forEach(item => {
-      const d = document.createElement('div');
-      d.className = 'comp-item';
-      d.innerHTML = `<div class="comp-status ${item.status}">${icons[item.status]}</div><div><div class="comp-label">${esc(item.label)}</div><div class="comp-desc">${esc(item.description)}</div></div>`;
-      checks.appendChild(d);
-    });
-    showToast('Compliance scan complete!');
-  } catch { clearInterval(iv); fill.style.width='0%'; }
-  btn.disabled = false; btn.textContent = '🔍 Run AI Compliance Scan';
+async function deletePortalDoc(id) {
+  if (!portalToken) return
+  await fetch(BACKEND+'/clients/documents/'+id, {method:'DELETE',headers:{'Authorization':'Bearer '+portalToken}})
+  loadPortalDocs()
 }
 
-function exportText(elId, fname) {
-  const t = document.getElementById(elId).textContent;
-  if (!t) { showToast('Generate content first'); return; }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([t], {type:'text/plain'}));
-  a.download = 'NNIT_' + fname + '.txt';
-  a.click();
-  showToast('Exported!');
+function portalLogout() {
+  portalToken = null; portalClient = null
+  localStorage.removeItem('nnit-portal-token')
+  localStorage.removeItem('nnit-portal-client')
+  document.getElementById('portal-auth').style.display = 'block'
+  document.getElementById('portal-dashboard').style.display = 'none'
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+// Auto-login if token exists
+if (portalToken && portalClient) {
+  setTimeout(() => { if (document.getElementById('page-portal').classList.contains('active')) showPortalDashboard() }, 100)
 }
 
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ── MULTI-LANGUAGE ──
+const LANG_PROMPTS = {
+  en: 'Respond in English.',
+  de: 'Antworte auf Deutsch.',
+  nl: 'Antwoord in het Nederlands.',
+  fr: 'Réponds en français.',
+  es: 'Responde en español.',
+  it: 'Rispondi in italiano.',
+  pt: 'Responda em português.',
+  ar: 'أجب باللغة العربية.',
+  zh: '请用中文回答。',
+  ja: '日本語で答えてください。',
+  ko: '한국어로 답변해주세요.',
+  ru: 'Отвечай на русском языке.'
 }
+let currentLang = 'en'
+
+function changeLang(lang) {
+  currentLang = lang
+  const speechLangs = {en:'en-GB',de:'de-DE',nl:'nl-NL',fr:'fr-FR',es:'es-ES',it:'it-IT',pt:'pt-PT',ar:'ar-SA',zh:'zh-CN',ja:'ja-JP',ko:'ko-KR',ru:'ru-RU'}
+  if (recognition) recognition.lang = speechLangs[lang]||'en-GB'
+  document.getElementById('reader-lang').value = speechLangs[lang]||'en-GB'
+}
+
+// Override callAI to include language
+const _callAI = callAI
+async function callAI(messages, systemPrompt) {
+  const langPrompt = LANG_PROMPTS[currentLang]||''
+  return _callAI(messages, (systemPrompt||'You are NNIT Legal AI, a professional legal assistant.') + ' ' + langPrompt)
+}
+
+// ── SCHEDULE EMAIL ──
+const _scheduleMeeting = scheduleMeeting
+async function scheduleMeeting() {
+  _scheduleMeeting()
+  const client = document.getElementById('sched-client').value.trim()
+  const email = document.getElementById('sched-email').value.trim()
+  const date = document.getElementById('sched-date').value
+  const time = document.getElementById('sched-time').value
+  const duration = document.getElementById('sched-duration').value
+  const type = document.getElementById('sched-type').value
+  const agenda = document.getElementById('sched-agenda').value
+  const roomName = 'nnit-'+client.toLowerCase().replace(/\s+/g,'-')+'-'+(date||'').replace(/-/g,'')
+  if (email) {
+    try {
+      await fetch(BACKEND+'/email/meeting-invite', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({clientName:client, clientEmail:email, meetingDate:date, meetingTime:time, duration, type, roomName, agenda})
+      })
+      const box = document.getElementById('sched-result-box')
+      if (box) box.innerHTML += '\n\n✅ Invitation email sent to ' + email
+    } catch(e) { console.log('Email send error:', e) }
+  }
+}
+
+// INIT
+updateBioChip()
+renderTemplates()
+document.getElementById('room-name').value='nnit-legal-'+Math.random().toString(36).substr(2,6)
+document.getElementById('sched-date').value=new Date().toISOString().split('T')[0]
+document.getElementById('pay-date').value=new Date().toISOString().split('T')[0]
+
+// Page titles update
+PAGE_TITLES.payments = '💳 Book Consultation'
+PAGE_TITLES.portal = '👤 Client Portal'
 </script>
 </body>
 </html>
