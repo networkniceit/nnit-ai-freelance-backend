@@ -40,8 +40,8 @@ router.post('/', async (req, res) => {
   try {
     const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
     const { rows } = await global.pgPool.query(
-      'INSERT INTO products (name, category, price, original_price, rating, description, badge) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [name, category, price, originalPrice, rating || 4, description || '', badge || 'NEW']
+      'INSERT INTO products (name, category, price, original_price, rating, description, badge, image) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+      [name, category, price, originalPrice, rating || 4, description || '', badge || 'NEW', image]
     );
     res.json({ success: true, product: rows[0] });
   } catch (err) {
