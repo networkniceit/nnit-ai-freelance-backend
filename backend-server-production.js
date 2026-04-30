@@ -12,6 +12,12 @@ const helmet = require('helmet');
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use((req, res, next) => { res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"); next(); });
 
+const cors = require('cors');
+app.use(cors({
+  origin: ['https://nnit.shop', 'https://nnit-shop.vercel.app', 'http://localhost:3000', '*'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 // Body parsers
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
@@ -287,4 +293,5 @@ process.on('SIGINT', async () => {
 startServer();
 
 module.exports = { app, getPgPool: () => global.pgPool }; 
+
 
