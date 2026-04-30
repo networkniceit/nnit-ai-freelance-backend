@@ -1,4 +1,4 @@
-﻿// NNIT - Production Server (Fixed - No Circular Dependencies)
+// NNIT - Production Server (Fixed - No Circular Dependencies)
 // Main server file for Railway/Vercel deployment
 
 const express = require('express');
@@ -10,19 +10,7 @@ const fs = require('fs');
 const app = express();
 const helmet = require('helmet');
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use((req, res, next) => {
-  res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;");
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  next();
-});
-app.use((req, res, next) => { res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"); next(); });
 
-const cors = require('cors');
-app.use(cors({
-  origin: ['https://nnit.shop', 'https://nnit-shop.vercel.app', 'http://localhost:3000', '*'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 // Body parsers
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
@@ -152,63 +140,6 @@ app.post('/api/ai/chat', async (req, res) => {
   }
 });
 
-
-app.post('/api/legal-ai', async (req, res) => {
-  try {
-    const { messages, message, prompt } = req.body;
-    const msgs = messages || [{ role: 'user', content: message || prompt }];
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({ model: 'gpt-4', messages: msgs, max_tokens: 1800, temperature: 0.7 })
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/legal-ai', async (req, res) => {
-  try {
-    const { messages, message, prompt } = req.body;
-    const msgs = messages || [{ role: 'user', content: message || prompt }];
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({ model: 'gpt-4', messages: msgs, max_tokens: 1800, temperature: 0.7 })
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/legal-ai', async (req, res) => {
-  try {
-    const { messages, message, prompt } = req.body;
-    const msgs = messages || [{ role: 'user', content: message || prompt }];
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ``
-      },
-      body: JSON.stringify({ model: 'gpt-4', messages: msgs, max_tokens: 1800, temperature: 0.7 })
-    });
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 // ==================== API ROUTES ====================
 
 const authRoutes = require('./routes/auth');
@@ -224,9 +155,6 @@ app.use('/api/notifications', notificationsRoutes);
 const adminRoutes = require('./routes/admin');
 app.use('/', adminRoutes);
 
-
-const productsRoutes = require('./routes/products');
-app.use('/api/products', productsRoutes);
 // ==================== CONVENIENCE ROUTES ====================
 
 app.all('/login', async (req, res) => {
@@ -265,7 +193,7 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
-// ==================== ROOT � SERVE LEGAL AI FRONTEND ====================
+// ==================== ROOT — SERVE LEGAL AI FRONTEND ====================
 
 app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, 'index.html');
@@ -317,21 +245,21 @@ const startServer = async () => {
     console.log('PostgreSQL URL:', process.env.POSTGRES_URL ? 'SET' : 'NOT SET');
     try {
       await pgPool.query('SELECT NOW()');
-      logger.info('? PostgreSQL connected');
+      logger.info('✅ PostgreSQL connected');
     } catch (error) {
-      logger.warn('?? PostgreSQL connection failed: ' + error.message);
+      logger.warn('⚠️ PostgreSQL connection failed: ' + error.message);
     }
 
     app.listen(PORT, () => {
-      logger.info(`?? NNIT Backend Server running on port ${PORT}`);
-      logger.info(`?? Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`?? Security: ENABLED`);
-      logger.info(`?? Logging: ACTIVE`);
-      logger.info(`?? Authentication: ENABLED`);
-      logger.info(`?? Audit Log: ENABLED`);
-      logger.info(`?? Notifications: ENABLED`);
-      console.log(`\n? Server ready at http://localhost:${PORT}`);
-      console.log(`? Health: http://localhost:${PORT}/health\n`);
+      logger.info(`🚀 NNIT Backend Server running on port ${PORT}`);
+      logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`🔒 Security: ENABLED`);
+      logger.info(`📝 Logging: ACTIVE`);
+      logger.info(`🔐 Authentication: ENABLED`);
+      logger.info(`📋 Audit Log: ENABLED`);
+      logger.info(`🔔 Notifications: ENABLED`);
+      console.log(`\n✅ Server ready at http://localhost:${PORT}`);
+      console.log(`✅ Health: http://localhost:${PORT}/health\n`);
     });
 
   } catch (error) {
@@ -354,11 +282,4 @@ process.on('SIGINT', async () => {
 
 startServer();
 
-module.exports = { app, getPgPool: () => global.pgPool }; 
-
-
-
-
-
-
-
+module.exports = { app, getPgPool: () => global.pgPool };
