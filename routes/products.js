@@ -81,7 +81,19 @@ router.post('/fix-categories', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// DELETE product
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await global.pgPool.query('DELETE FROM products WHERE id=$1', [id]);
+    res.json({ success: true, message: 'Product deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 module.exports = router;
+
 
 
 
