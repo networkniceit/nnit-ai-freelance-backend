@@ -92,7 +92,18 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// Cleanup fake products
+router.post('/cleanup', async (req, res) => {
+  try {
+    const result = await global.pgPool.query('DELETE FROM products WHERE id > 234');
+    res.json({ success: true, message: "Cleaned up!", deleted: result.rowCount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 module.exports = router;
+
 
 
 
