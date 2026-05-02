@@ -66,17 +66,12 @@ router.put('/:id', async (req, res) => {
 });
 router.post('/fix-categories', async (req, res) => {
   try {
-    await global.pgPool.query("UPDATE products SET category='fashion' WHERE LOWER(category) IN ('clothing','fashion')");
-    await global.pgPool.query("UPDATE products SET category='electronics' WHERE LOWER(category)='electronics'");
-    await global.pgPool.query("UPDATE products SET category='sports' WHERE LOWER(category)='sports'");
-    await global.pgPool.query("UPDATE products SET category='beauty' WHERE LOWER(category)='beauty'");
-    await global.pgPool.query("UPDATE products SET category='kids' WHERE LOWER(category)='kids'");
-    await global.pgPool.query("UPDATE products SET category='home' WHERE LOWER(category)='home'");
-    await global.pgPool.query("UPDATE products SET category='pets' WHERE LOWER(category)='pets'");
-    await global.pgPool.query("UPDATE products SET category='office' WHERE LOWER(category)='office'");
-    await global.pgPool.query("UPDATE products SET category='food' WHERE LOWER(category)='food'");
-    await global.pgPool.query("UPDATE products SET category='garden' WHERE LOWER(category)='garden'");
+    await global.pgPool.query("UPDATE products SET category=LOWER(category)");
     res.json({ success: true, message: 'Categories fixed!' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -113,6 +108,7 @@ router.post('/nuke', async (req, res) => {
   }
 });
 module.exports = router;
+
 
 
 
