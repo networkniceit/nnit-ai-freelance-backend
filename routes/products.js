@@ -28,7 +28,7 @@ router.post('/setup', async (req, res) => {
 // GET all products
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await global.pgPool.query('SELECT * FROM products ORDER BY created_at DESC');
+    const { rows } = await global.pgPool.query('SELECT * FROM products ORDER BY created_at DESC LIMIT 2000');
     res.json({ success: true, products: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -103,6 +103,7 @@ router.post('/cleanup', async (req, res) => {
   }
 });
 module.exports = router;
+
 
 
 
