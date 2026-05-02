@@ -102,7 +102,18 @@ router.post('/cleanup', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// Nuke bad products
+router.post('/nuke', async (req, res) => {
+  try {
+    const result = await global.pgPool.query('DELETE FROM products WHERE id > 234');
+    res.json({ success: true, message: "Nuked!", deleted: result.rowCount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 module.exports = router;
+
 
 
 
