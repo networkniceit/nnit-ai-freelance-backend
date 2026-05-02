@@ -23,6 +23,14 @@ router.post('/nuke', async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+
+router.get('/count', async (req, res) => {
+  try {
+    const { rows } = await global.pgPool.query('SELECT COUNT(*) as total, category, COUNT(*) FROM products GROUP BY category ORDER BY category');
+    const total = await global.pgPool.query('SELECT COUNT(*) as total FROM products');
+    res.json({ success: true, total: total.rows[0].total, byCategory: rows });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
 router.get('/', async (req, res) => {
   try {
     const { rows } = await global.pgPool.query('SELECT * FROM products ORDER BY created_at DESC LIMIT 2000');
@@ -62,4 +70,5 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+
 
