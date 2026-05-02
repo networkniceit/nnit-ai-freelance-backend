@@ -1,41 +1,35 @@
 ﻿const express = require('express');
 const router = express.Router();
 
-// Setup - create table
 router.post('/setup', async (req, res) => {
   try {
-    await global.pgPool.query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255),
-        category VARCHAR(100),
-        price DECIMAL(10,2),
-        original_price DECIMAL(10,2),
-        rating INTEGER DEFAULT 4,
-        description TEXT,
-        badge VARCHAR(50),
-        image TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    await global.pgPool.query(`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255), category VARCHAR(100), price DECIMAL(10,2), original_price DECIMAL(10,2), rating INTEGER DEFAULT 4, description TEXT, badge VARCHAR(50), image TEXT, created_at TIMESTAMP DEFAULT NOW())`);
     await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT');
     res.json({ success: true, message: 'Products table ready!' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// GET all products
+router.post('/fix-categories', async (req, res) => {
+  try {
+    await global.pgPool.query("UPDATE products SET category=LOWER(category)");
+    res.json({ success: true, message: 'Categories fixed!' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.post('/nuke', async (req, res) => {
+  try {
+    const result = await global.pgPool.query('DELETE FROM products WHERE id > 234');
+    res.json({ success: true, message: "Nuked!", deleted: result.rowCount });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 router.get('/', async (req, res) => {
   try {
     const { rows } = await global.pgPool.query('SELECT * FROM products ORDER BY created_at DESC LIMIT 2000');
     res.json({ success: true, products: rows });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// POST add product
 router.post('/', async (req, res) => {
   try {
     const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
@@ -44,13 +38,9 @@ router.post('/', async (req, res) => {
       [name, category, price, originalPrice, rating || 4, description || '', badge || 'NEW', image]
     );
     res.json({ success: true, product: rows[0] });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-
-// PUT update product
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -60,61 +50,15 @@ router.put('/:id', async (req, res) => {
       [name, category, price, originalPrice, rating, description, badge, image, id]
     );
     res.json({ success: true, product: rows[0] });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-router.post('/fix-categories', async (req, res) => {
-  try {
-    await global.pgPool.query("UPDATE products SET category=LOWER(category)");
-    res.json({ success: true, message: 'Categories fixed!' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// DELETE product
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await global.pgPool.query('DELETE FROM products WHERE id=$1', [id]);
     res.json({ success: true, message: 'Product deleted' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// Cleanup fake products
-router.post('/cleanup', async (req, res) => {
-  try {
-    const result = await global.pgPool.query('DELETE FROM products WHERE id > 234');
-    res.json({ success: true, message: "Cleaned up!", deleted: result.rowCount });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// Nuke bad products
-router.post('/nuke', async (req, res) => {
-  try {
-    const result = await global.pgPool.query('DELETE FROM products WHERE id > 234');
-    res.json({ success: true, message: "Nuked!", deleted: result.rowCount });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
 module.exports = router;
-
-
-
-
-
-
-
-
-
-
