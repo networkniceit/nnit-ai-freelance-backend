@@ -50,8 +50,9 @@ router.post('/:id/apply', authenticateJWT, async (req, res) => {
     if (Job.db.readyState !== 1 || JobApplication.db.readyState !== 1) {
       return res.status(503).json({ success: false, message: 'Application database temporarily unavailable.' });
     }
-    const job = await Job.findById(req.params.id).select('_id').lean();
+    const job = await Job.findById(req.params.id).select('_id status').lean();
     if (!job) return res.status(404).json({ success: false, message: 'Project not found.' });
+    if (job.status === 'closed') return res.status(409).json({ success: false, message: 'This project is closed to new applications.' });
     await JobApplication.init();
     const application = await JobApplication.create({
       jobId: job._id, applicantId: String(owner), status: 'pending'

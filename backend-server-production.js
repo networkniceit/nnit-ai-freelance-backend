@@ -146,6 +146,8 @@ const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 const jobsRoutes = require('./routes/jobs');
 app.use('/api/jobs', jobsRoutes);
+// NNIT_WORKSPACE_V1: existing account authentication and owner-scoped records.
+app.use('/api/workspace', require('./routes/marketplaceWorkspace'));
 const paymentsRoutes = require('./routes/payments');
 const productRoutes = require('./routes/products');
 app.use('/api/products', productRoutes);

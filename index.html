@@ -546,7 +546,7 @@
     }
 
     .plan-features li:last-child { border: none; }
-    .plan-features li::before { content: '?'; color: var(--green); font-weight: 700; }
+    .plan-features li::before { content: '+'; color: var(--green); font-weight: 700; }
 
     /* PROFILE PANEL */
     .profile-panel {
@@ -726,6 +726,13 @@
       background: var(--border);
       margin: 32px 0;
     }
+    .tabs { flex-wrap: wrap; max-width: 100%; }
+    .job-card { cursor: default; }
+    .job-card .btn { margin: 6px 6px 0 0; }
+    #applicantsPanel { margin-top: 24px; }
+    #applicantsPanel .job-card { margin-top: 12px; }
+    .job-card p { margin: 8px 0; overflow-wrap: anywhere; }
+    .close-btn { width: auto; padding: 0 8px; font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -794,7 +801,7 @@
   <div class="hero" id="heroSection">
     <div class="hero-badge">NNIT Enterprise</div>
     <h1>AI Freelancer<br>Platform</h1>
-    <p>Connect with top freelancers, post projects, and grow your business with AI-powered matching.</p>
+    <p>Browse saved projects, manage applications and showcase your freelancer profile with NNIT.</p>
     <div class="hero-actions">
       <button class="btn btn-primary" data-nnit-action="showSection" data-nnit-arg="marketplace">Browse Jobs</button>
       <button class="btn btn-ghost" data-nnit-action="openAuth" data-nnit-arg="register">Join as Freelancer</button>
@@ -802,23 +809,9 @@
   </div>
 
   <!-- STATS -->
-  <div class="stats">
-    <div class="stat-card">
-      <div class="stat-number">2.4K+</div>
-      <div class="stat-label">Active Freelancers</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">840+</div>
-      <div class="stat-label">Projects Posted</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">EUR 1.2M</div>
-      <div class="stat-label">Total Paid Out</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">98%</div>
-      <div class="stat-label">Satisfaction Rate</div>
-    </div>
+  <div class="stats" aria-label="Saved marketplace counts">
+    <div class="stat-card"><div class="stat-number" id="freelancerCount">Loading</div><div class="stat-label">Available saved profiles</div></div>
+    <div class="stat-card"><div class="stat-number" id="projectCount">Loading</div><div class="stat-label">Saved projects</div></div>
   </div>
 
   <!-- PROFILE PANEL -->
@@ -838,7 +831,9 @@
     <button class="tab active" data-nnit-action="showSection" data-nnit-arg="marketplace">Marketplace</button>
     <button class="tab" data-nnit-action="showSection" data-nnit-arg="plans">Plans</button>
     <button class="tab" data-nnit-action="showSection" data-nnit-arg="freelancers">Freelancers</button>
-    <button class="tab" data-nnit-action="showSection" data-nnit-arg="notifications">Notifications</button>
+    <button class="tab" data-nnit-action="showSection" data-nnit-arg="applications">My Applications</button>
+    <button class="tab" data-nnit-action="showSection" data-nnit-arg="my-projects">My Projects</button>
+    <button class="tab" data-nnit-action="showSection" data-nnit-arg="notifications">Updates</button>
   </div>
 
   <!-- MARKETPLACE -->
@@ -938,7 +933,7 @@
           <div class="section-title">Register as Freelancer</div>
         </div>
         <div class="register-form">
-          <h3>Create Your Freelancer Profile</h3>
+          <h3>Create or Update Your Freelancer Profile</h3>
           <div class="form-group">
             <label>Full Name</label>
             <input type="text" id="flName" placeholder="John Doe" />
@@ -958,14 +953,17 @@
             <textarea id="flBio" placeholder="Tell clients about yourself..."></textarea>
           </div>
           <div class="form-group">
-            <label>Experience (years)</label>
-            <input type="number" id="flExp" placeholder="3" />
+            <label for="flExp">Experience / project summary</label>
+            <textarea id="flExp" maxlength="5000" placeholder="Describe only experience you can substantiate."></textarea>
           </div>
-          <button class="btn btn-primary" data-nnit-action="registerFreelancer">Register as Freelancer</button>
+          <div class="form-group">
+            <label><input type="checkbox" id="flAvailable" checked style="width:auto"> Available for projects</label>
+          </div>
+          <button class="btn btn-primary" data-nnit-action="registerFreelancer">Save Freelancer Profile</button>
         </div>
       </div>
       <div>
-        <div class="section-title" style="margin-bottom:16px">Top Freelancers</div>
+        <div class="section-title" style="margin-bottom:16px">Available Freelancers</div>
         <div id="freelancersList">
           <div class="empty"><div class="empty-icon"></div><p>Loading freelancers...</p></div>
         </div>
@@ -973,13 +971,34 @@
     </div>
   </div>
 
+  <div class="content-section" id="section-applications">
+    <div class="section-header"><h2 class="section-title">My Applications</h2><button class="btn btn-ghost" data-nnit-action="loadApplications">Refresh</button></div>
+    <p class="job-meta">Your latest 100 saved applications. Decisions do not initiate payments or send messages.</p>
+    <div id="applicationsList" class="jobs-grid"></div>
+  </div>
+  <div class="content-section" id="section-my-projects">
+    <div class="section-header"><h2 class="section-title">My Projects</h2><button class="btn btn-ghost" data-nnit-action="loadMyProjects">Refresh</button></div>
+    <p class="job-meta">Your latest 100 projects. Close a project to stop new applications; existing records are preserved.</p>
+    <div id="projectEditForm" class="register-form" hidden>
+      <h3>Edit Project</h3>
+      <div class="form-group"><label for="editTitle">Title</label><input id="editTitle" maxlength="200"></div>
+      <div class="form-group"><label for="editDescription">Description</label><textarea id="editDescription" maxlength="10000"></textarea></div>
+      <div class="form-group"><label for="editBudget">Budget (EUR)</label><input id="editBudget" type="number" min="0" step="0.01"></div>
+      <div class="form-group"><label for="editSkills">Skills, comma separated</label><input id="editSkills"></div>
+      <button class="btn btn-primary" data-nnit-action="saveProjectEdit">Save changes</button>
+      <button class="btn btn-ghost" data-nnit-action="cancelProjectEdit">Cancel</button>
+    </div>
+    <div id="myProjectsList" class="jobs-grid"></div>
+    <div id="applicantsPanel" aria-live="polite"></div>
+  </div>
+
   <!-- NOTIFICATIONS -->
   <div class="content-section" id="section-notifications">
     <div class="section-header">
-      <div class="section-title">Notifications & Audit</div>
+      <div class="section-title">Application Updates</div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" data-nnit-action="loadNotifications" style="font-size:0.82rem;padding:7px 14px">Load Notifications</button>
-        <button class="btn btn-ghost" data-nnit-action="loadAudit" style="font-size:0.82rem;padding:7px 14px">Load Audit Logs</button>
+        <button class="btn btn-ghost" data-nnit-action="loadNotifications" style="font-size:0.82rem;padding:7px 14px">Refresh Updates</button>
+
       </div>
     </div>
     <div id="notifsList">
@@ -999,7 +1018,7 @@
   // ---- HELPERS ----
   function toast(msg, type = 'info') {
     const t = document.getElementById('toast');
-    t.textContent = (type === 'success' ? '? ' : type === 'error' ? '? ' : '?? ') + msg;
+    t.textContent = msg;
     t.className = 'toast show ' + type;
     setTimeout(() => t.className = 'toast', 3000);
   }
@@ -1013,13 +1032,17 @@
   }
 
   function showSection(name) {
+    const allowed = ['marketplace','plans','freelancers','notifications','applications','my-projects'];
+    if (!allowed.includes(name)) return;
+    if (!token && ['notifications','applications','my-projects'].includes(name)) return openAuth('login');
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('section-' + name)?.classList.add('active');
-    const tabs = ['marketplace','plans','freelancers','notifications'];
-    const idx = tabs.indexOf(name);
-    document.querySelectorAll('.tab')[idx]?.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.nnitArg === name));
+    document.getElementById('section-' + name).classList.add('active');
     if (name === 'marketplace') loadJobs();
+    if (name === 'freelancers') { loadFreelancers(); loadOwnFreelancer(); }
+    if (name === 'applications') loadApplications();
+    if (name === 'my-projects') loadMyProjects();
+    if (name === 'notifications') loadNotifications();
   }
 
   // ---- AUTH ----
@@ -1098,6 +1121,7 @@
     localStorage.removeItem('nnit_token');
     updateNav(false);
     document.getElementById('profilePanel').classList.remove('active');
+    clearWorkspaceViews();
     toast('Logged out successfully');
   }
 
@@ -1123,34 +1147,28 @@
 
   // ---- JOBS ----
   async function loadJobs() {
-    const grid = document.getElementById('jobsGrid');
-    grid.innerHTML = '<div class="empty"><span class="loading"></span></div>';
+    const box = document.getElementById('jobsGrid');
+    messageBox(box, 'Loading saved projects...');
     try {
-      const res = await api('GET', '/jobs');
-      const jobs = res.jobs || res.data || [];
-      if (!jobs.length) {
-        grid.innerHTML = '<div class="empty"><div class="empty-icon"></div><p>No projects yet. Be the first to post!</p></div>';
-        return;
+      const result = await api('GET', '/jobs');
+      if (!result.success || !Array.isArray(result.jobs)) throw new Error(result.message || 'Could not load projects.');
+      box.replaceChildren();
+      for (const project of result.jobs) {
+        const card = node('div', 'job-card');
+        card.append(node('h3', 'job-title', project.title || 'Project'),
+          node('p', 'job-budget', 'EUR ' + project.budget), node('p', '', project.description || ''),
+          node('p', 'job-meta', (project.skills || []).join(', ')),
+          node('p', 'job-meta', 'Posted: ' + dateLabel(project.createdAt)),
+          node('p', '', 'Status: ' + (project.status || 'open')));
+        if (project.status === 'closed') card.append(node('p', 'job-meta', 'Applications closed'));
+        else {
+          const button = actionButton('Apply Now', 'applyJob', undefined, 'btn btn-success');
+          button.dataset.nnitJob = encodeURIComponent(String(project._id)); card.append(button);
+        }
+        box.append(card);
       }
-      grid.innerHTML = jobs.map(job => `
-        <div class="job-card">
-          <div class="job-header">
-            <div class="job-title">${job.title || job.name || 'Project'}</div>
-            <div class="job-budget">EUR ${job.budget || job.price || '0'}</div>
-          </div>
-          <div class="job-desc">${job.description || 'No description provided.'}</div>
-          <div class="job-tags">
-            ${(job.skills || job.tags || []).slice(0,4).map(s => `<span class="tag">${s}</span>`).join('')}
-          </div>
-          <div class="job-footer">
-            <span class="job-meta">Posted ${new Date(job.createdAt || Date.now()).toLocaleDateString()}</span>
-            <button class="btn btn-success" style="padding:6px 14px;font-size:0.8rem" data-nnit-action="applyJob" data-nnit-job="${encodeURIComponent(String(job._id))}">Apply Now</button>
-          </div>
-        </div>
-      `).join('');
-    } catch(e) {
-      grid.innerHTML = '<div class="empty"><div class="empty-icon"></div><p>Could not load projects</p></div>';
-    }
+      if (!result.jobs.length) messageBox(box, 'No saved projects yet.');
+    } catch (error) { messageBox(box, error.message); }
   }
 
   function togglePostJob() {
@@ -1179,60 +1197,10 @@
   async function applyJob(jobId) {
     if (!token) return openAuth('login');
     const res = await api('POST', '/jobs/' + jobId + '/apply', {});
-    toast(res.success ? 'Application submitted!' : (res.message || 'Failed to apply'), res.success ? 'success' : 'error');
+    toast(res.success ? 'Application saved. Open My Applications to view it.' : (res.message || 'Failed to apply'), res.success ? 'success' : 'error');
   }
 
   // ---- FREELANCERS ----
-  async function registerFreelancer() {
-    if (!token) return openAuth('login');
-    const name = document.getElementById('flName').value;
-    const skills = document.getElementById('flSkills').value.split(',').map(s => s.trim());
-    const hourlyRate = document.getElementById('flRate').value;
-    const bio = document.getElementById('flBio').value;
-    const experience = document.getElementById('flExp').value;
-    if (!name || !skills.length) return toast('Please fill in required fields', 'error');
-    const res = await api('POST', '/freelancers/register', { name, skills, hourlyRate: parseFloat(hourlyRate), bio, experience: parseInt(experience) });
-    if (res.success || res._id) {
-      toast('Freelancer profile created!', 'success');
-    } else {
-      toast(res.message || 'Failed to register', 'error');
-    }
-  }
-
-  // ---- NOTIFICATIONS ----
-  async function loadNotifications() {
-    if (!token) return openAuth('login');
-    const res = await api('GET', '/notifications');
-    const list = document.getElementById('notifsList');
-    const notifs = res.notifications || res.data || [];
-    if (!notifs.length) {
-      list.innerHTML = '<div class="empty"><div class="empty-icon"></div><p>No notifications yet</p></div>';
-      return;
-    }
-    list.innerHTML = notifs.map(n => `
-      <div class="job-card" style="margin-bottom:10px">
-        <div class="job-title">${n.title || n.message || 'Notification'}</div>
-        <div class="job-meta" style="margin-top:6px">${new Date(n.createdAt || Date.now()).toLocaleString()}</div>
-      </div>
-    `).join('');
-  }
-
-  async function loadAudit() {
-    if (!token) return openAuth('login');
-    const res = await api('GET', '/audit-log');
-    const list = document.getElementById('notifsList');
-    const logs = res.logs || res.data || [];
-    if (!logs.length) {
-      list.innerHTML = '<div class="empty"><div class="empty-icon"></div><p>No audit logs yet</p></div>';
-      return;
-    }
-    list.innerHTML = logs.map(l => `
-      <div class="job-card" style="margin-bottom:10px">
-        <div class="job-title">${l.action || l.event || 'Event'}</div>
-        <div class="job-meta" style="margin-top:6px">${new Date(l.createdAt || Date.now()).toLocaleString()}</div>
-      </div>
-    `).join('');
-  }
 
   // ---- STRIPE ----
   async function subscribe(plan) {
@@ -1250,18 +1218,238 @@
     }
   }
 
+  // NNIT_WORKSPACE_V1: saved records, owner-scoped controls, text-only rendering.
+  let ownedProjects = new Map();
+  let editingProject = null;
+  let applicantsProject = null;
+  function node(tag, className, text) {
+    const item = document.createElement(tag);
+    if (className) item.className = className;
+    if (text !== undefined) item.textContent = String(text);
+    return item;
+  }
+  function actionButton(label, action, arg, className = 'btn btn-ghost') {
+    const button = node('button', className, label);
+    button.type = 'button'; button.dataset.nnitAction = action;
+    if (arg !== undefined) button.dataset.nnitArg = String(arg);
+    return button;
+  }
+  function messageBox(container, text) {
+    container.replaceChildren(node('div', 'empty', text));
+  }
+  function dateLabel(value) {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleString() : 'Date unavailable';
+  }
+  async function workspace(method, route, body) {
+    const result = await api(method, '/workspace' + route, body);
+    if (!result || result.success !== true) throw new Error(result?.message || result?.error || 'Request failed.');
+    return result;
+  }
+  async function loadSummary() {
+    try {
+      const result = await workspace('GET', '/summary');
+      document.getElementById('projectCount').textContent = result.projects;
+      document.getElementById('freelancerCount').textContent = result.freelancers;
+    } catch {
+      document.getElementById('projectCount').textContent = 'Unavailable';
+      document.getElementById('freelancerCount').textContent = 'Unavailable';
+    }
+  }
+  async function loadFreelancers() {
+    const box = document.getElementById('freelancersList');
+    messageBox(box, 'Loading saved profiles...');
+    try {
+      const result = await workspace('GET', '/freelancers');
+      box.replaceChildren();
+      for (const profile of result.freelancers) {
+        const card = node('div', 'job-card');
+        card.append(node('h3', 'job-title', profile.name),
+          node('p', 'job-budget', 'EUR ' + profile.hourlyRate + '/hr'),
+          node('p', '', profile.bio), node('p', 'job-meta', profile.skills.join(', ')),
+          node('p', '', profile.experience), node('p', 'job-meta', 'User-supplied profile. Client rating not verified.'));
+        box.append(card);
+      }
+      if (!result.freelancers.length) messageBox(box, 'No available freelancer profiles saved yet.');
+    } catch (error) { messageBox(box, error.message); }
+  }
+  async function loadOwnFreelancer() {
+    if (!token) return;
+    try {
+      const { profile } = await workspace('GET', '/profile');
+      if (!profile) return;
+      document.getElementById('flName').value = profile.name || '';
+      document.getElementById('flSkills').value = (profile.skills || []).join(', ');
+      document.getElementById('flRate').value = profile.hourlyRate;
+      document.getElementById('flBio').value = profile.bio || '';
+      document.getElementById('flExp').value = profile.experience || '';
+      document.getElementById('flAvailable').checked = profile.available;
+    } catch (error) { toast(error.message, 'error'); }
+  }
+  async function registerFreelancer() {
+    if (!token) return openAuth('login');
+    const rate = document.getElementById('flRate').value;
+    if (!rate.trim()) return toast('Enter an hourly rate.', 'error');
+    try {
+      await workspace('PUT', '/profile', {
+        name: document.getElementById('flName').value,
+        skills: document.getElementById('flSkills').value.split(',').map(s => s.trim()).filter(Boolean),
+        hourlyRate: Number(rate), bio: document.getElementById('flBio').value,
+        experience: document.getElementById('flExp').value,
+        available: document.getElementById('flAvailable').checked
+      });
+      toast('Freelancer profile saved.', 'success');
+      await Promise.all([loadFreelancers(), loadSummary()]);
+    } catch (error) { toast(error.message, 'error'); }
+  }
+  async function loadApplications() {
+    if (!token) return openAuth('login');
+    const box = document.getElementById('applicationsList');
+    messageBox(box, 'Loading your saved applications...');
+    try {
+      const result = await workspace('GET', '/applications');
+      box.replaceChildren();
+      for (const application of result.applications) {
+        const card = node('div', 'job-card');
+        card.append(node('h3', 'job-title', application.project?.title || 'Project unavailable'),
+          node('p', '', 'Status: ' + application.status),
+          node('p', 'job-meta', 'Applied: ' + dateLabel(application.createdAt)),
+          node('p', 'job-meta', 'Reference: ' + application.id));
+        if (application.project) card.append(node('p', 'job-budget', 'Project budget: EUR ' + application.project.budget));
+        box.append(card);
+      }
+      if (!result.applications.length) messageBox(box, 'You have no saved applications.');
+    } catch (error) { messageBox(box, error.message); }
+  }
+  async function loadMyProjects() {
+    if (!token) return openAuth('login');
+    const box = document.getElementById('myProjectsList');
+    document.getElementById('applicantsPanel').replaceChildren();
+    messageBox(box, 'Loading your posted projects...');
+    try {
+      const result = await workspace('GET', '/projects');
+      ownedProjects = new Map(result.projects.map(p => [String(p._id), p]));
+      box.replaceChildren();
+      for (const project of result.projects) {
+        const card = node('div', 'job-card');
+        card.append(node('h3', 'job-title', project.title), node('p', '', project.description),
+          node('p', 'job-budget', 'EUR ' + project.budget),
+          node('p', 'job-meta', (project.skills || []).join(', ')),
+          node('p', '', 'Status: ' + (project.status || 'open')),
+          actionButton('View applicants', 'viewApplicants', project._id),
+          actionButton('Edit project', 'editProject', project._id),
+          actionButton(project.status === 'closed' ? 'Reopen project' : 'Close project', 'toggleProject', project._id));
+        box.append(card);
+      }
+      if (!result.projects.length) messageBox(box, 'You have no posted projects.');
+    } catch (error) { messageBox(box, error.message); }
+  }
+  function editProject(id) {
+    const project = ownedProjects.get(id);
+    if (!project) return toast('Reload My Projects first.', 'error');
+    editingProject = id;
+    document.getElementById('editTitle').value = project.title;
+    document.getElementById('editDescription').value = project.description;
+    document.getElementById('editBudget').value = project.budget;
+    document.getElementById('editSkills').value = (project.skills || []).join(', ');
+    document.getElementById('projectEditForm').hidden = false;
+    document.getElementById('editTitle').focus();
+  }
+  function cancelProjectEdit() {
+    editingProject = null;
+    document.getElementById('projectEditForm').hidden = true;
+  }
+  async function saveProjectEdit() {
+    if (!editingProject) return;
+    const budget = document.getElementById('editBudget').value;
+    if (!budget.trim()) return toast('Enter a budget.', 'error');
+    try {
+      await workspace('PATCH', '/projects/' + editingProject, {
+        title: document.getElementById('editTitle').value,
+        description: document.getElementById('editDescription').value,
+        budget: Number(budget), skills: document.getElementById('editSkills').value.split(',').map(s => s.trim()).filter(Boolean)
+      });
+      cancelProjectEdit(); toast('Project updated.', 'success');
+      await Promise.all([loadMyProjects(), loadJobs()]);
+    } catch (error) { toast(error.message, 'error'); }
+  }
+  async function toggleProject(id) {
+    const project = ownedProjects.get(id);
+    if (!project) return toast('Reload My Projects first.', 'error');
+    try {
+      await workspace('PATCH', '/projects/' + id, { status: project.status === 'closed' ? 'open' : 'closed' });
+      await Promise.all([loadMyProjects(), loadJobs()]);
+      toast('Project status saved.', 'success');
+    } catch (error) { toast(error.message, 'error'); }
+  }
+  async function viewApplicants(id) {
+    applicantsProject = id;
+    const box = document.getElementById('applicantsPanel');
+    messageBox(box, 'Loading applicants...');
+    try {
+      const result = await workspace('GET', '/projects/' + id + '/applications');
+      box.replaceChildren(node('h3', 'section-title', 'Applicants: ' + result.project.title));
+      for (const application of result.applications) {
+        const card = node('div', 'job-card');
+        card.append(node('h4', 'job-title', application.applicantName),
+          node('p', '', 'Status: ' + application.status),
+          node('p', 'job-meta', 'Applied: ' + dateLabel(application.createdAt)));
+        if (application.status === 'pending') {
+          card.append(actionButton('Accept', 'decideApplication', id + ':' + application.id + ':accepted', 'btn btn-success'),
+            actionButton('Reject', 'decideApplication', id + ':' + application.id + ':rejected', 'btn btn-danger'));
+        }
+        box.append(card);
+      }
+      if (!result.applications.length) box.append(node('p', 'empty', 'No applications received.'));
+    } catch (error) { messageBox(box, error.message); }
+  }
+  async function decideApplication(value) {
+    const [id, applicationId, status] = value.split(':');
+    try {
+      await workspace('PATCH', '/projects/' + id + '/applications/' + applicationId, { status });
+      toast('Application status saved. No payment or message was sent.', 'success');
+      await viewApplicants(id);
+    } catch (error) { toast(error.message, 'error'); }
+  }
+  async function loadNotifications() {
+    if (!token) return openAuth('login');
+    const box = document.getElementById('notifsList');
+    messageBox(box, 'Loading saved application updates...');
+    try {
+      const result = await workspace('GET', '/notifications');
+      box.replaceChildren();
+      for (const update of result.notifications) {
+        const card = node('div', 'job-card');
+        card.append(node('p', '', update.message), node('p', 'job-meta', 'Application date: ' + dateLabel(update.createdAt)));
+        box.append(card);
+      }
+      if (!result.notifications.length) messageBox(box, 'No application updates yet.');
+    } catch (error) { messageBox(box, error.message); }
+  }
+  function loadAudit() { showSection('applications'); }
+  function clearWorkspaceViews() {
+    ownedProjects.clear(); editingProject = null; applicantsProject = null;
+    for (const id of ['applicationsList','myProjectsList','applicantsPanel','notifsList']) document.getElementById(id).replaceChildren();
+    document.getElementById('projectEditForm').hidden = true;
+    for (const id of ['flName','flSkills','flRate','flBio','flExp']) document.getElementById(id).value = '';
+    document.getElementById('flAvailable').checked = true;
+    showSection('marketplace');
+  }
+
   // NNIT_CSP_EVENTS_V1: no eval and no inline event handlers.
-  const nnitActions = { showSection, loadProfile, logout, openAuth, closeAuth, switchAuthTab, doLogin, doRegister, togglePostJob, postJob, subscribe, registerFreelancer, loadNotifications, loadAudit, applyJob };
+  const nnitActions = { showSection, loadProfile, logout, openAuth, closeAuth, switchAuthTab, doLogin, doRegister, togglePostJob, postJob, subscribe, registerFreelancer, loadNotifications, loadAudit, applyJob, loadApplications, loadMyProjects, viewApplicants, editProject, cancelProjectEdit, saveProjectEdit, toggleProject, decideApplication };
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-nnit-action]');
-    if (!button) return;
+    if (!button || button.disabled) return;
     const action = button.dataset.nnitAction;
     if (!Object.prototype.hasOwnProperty.call(nnitActions, action)) return;
     event.preventDefault();
     const arg = action === 'applyJob'
       ? decodeURIComponent(button.dataset.nnitJob || '') : button.dataset.nnitArg;
+    button.disabled = true;
     Promise.resolve().then(() => nnitActions[action](arg))
-      .catch(() => toast('Request failed. Please try again.', 'error'));
+      .catch(() => toast('Request failed. Please try again.', 'error'))
+      .finally(() => { button.disabled = false; });
   });
 
   // ---- INIT ----
@@ -1270,6 +1458,7 @@
     loadProfile();
   }
   loadJobs();
+  loadSummary();
 </script>
 </body>
 </html>
