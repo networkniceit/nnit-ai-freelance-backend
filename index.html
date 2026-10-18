@@ -734,16 +734,16 @@
 <nav>
   <div class="nav-logo">NNIT</div>
   <div class="nav-links">
-    <a href="#" onclick="showSection('marketplace')">Marketplace</a>
-    <a href="#" onclick="showSection('plans')">Plans</a>
-    <a href="#" onclick="showSection('freelancers')">Freelancers</a>
+    <a href="#" data-nnit-action="showSection" data-nnit-arg="marketplace">Marketplace</a>
+    <a href="#" data-nnit-action="showSection" data-nnit-arg="plans">Plans</a>
+    <a href="#" data-nnit-action="showSection" data-nnit-arg="freelancers">Freelancers</a>
     <span id="nav-user" style="display:none">
-      <a href="#" onclick="loadProfile()" style="color:var(--accent)">My Profile</a>
-      <a href="#" onclick="logout()" class="btn btn-ghost" style="padding:5px 12px;font-size:0.8rem">Logout</a>
+      <a href="#" data-nnit-action="loadProfile" style="color:var(--accent)">My Profile</a>
+      <a href="#" data-nnit-action="logout" class="btn btn-ghost" style="padding:5px 12px;font-size:0.8rem">Logout</a>
     </span>
     <span id="nav-auth">
-      <a href="#" onclick="openAuth('login')" class="btn btn-ghost" style="padding:5px 14px;font-size:0.82rem">Login</a>
-      <a href="#" onclick="openAuth('register')" class="nav-badge">Get Started</a>
+      <a href="#" data-nnit-action="openAuth" data-nnit-arg="login" class="btn btn-ghost" style="padding:5px 14px;font-size:0.82rem">Login</a>
+      <a href="#" data-nnit-action="openAuth" data-nnit-arg="register" class="nav-badge">Get Started</a>
     </span>
   </div>
 </nav>
@@ -751,12 +751,12 @@
 <!-- AUTH MODAL -->
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-box">
-    <button class="close-btn" onclick="closeAuth()">?</button>
+    <button class="close-btn" data-nnit-action="closeAuth">?</button>
     <h2 id="authTitle">Welcome back</h2>
     <p id="authSubtitle">Sign in to your NNIT account</p>
     <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login</button>
-      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+      <button class="auth-tab active" id="tab-login" data-nnit-action="switchAuthTab" data-nnit-arg="login">Login</button>
+      <button class="auth-tab" id="tab-register" data-nnit-action="switchAuthTab" data-nnit-arg="register">Register</button>
     </div>
     <div id="loginForm">
       <div class="form-group">
@@ -767,7 +767,7 @@
         <label>Password</label>
         <input type="password" id="authPassword" placeholder="••••••••" />
       </div>
-      <button class="btn btn-primary" onclick="doLogin()" id="loginBtn">Sign In</button>
+      <button class="btn btn-primary" data-nnit-action="doLogin" id="loginBtn">Sign In</button>
     </div>
     <div id="registerForm" style="display:none">
       <div class="form-group">
@@ -782,7 +782,7 @@
         <label>Password</label>
         <input type="password" id="regPassword" placeholder="Min. 6 characters" />
       </div>
-      <button class="btn btn-primary" onclick="doRegister()" id="registerBtn">Create Account</button>
+      <button class="btn btn-primary" data-nnit-action="doRegister" id="registerBtn">Create Account</button>
     </div>
   </div>
 </div>
@@ -796,8 +796,8 @@
     <h1>AI Freelancer<br>Platform</h1>
     <p>Connect with top freelancers, post projects, and grow your business with AI-powered matching.</p>
     <div class="hero-actions">
-      <button class="btn btn-primary" onclick="showSection('marketplace')">Browse Jobs</button>
-      <button class="btn btn-ghost" onclick="openAuth('register')">Join as Freelancer</button>
+      <button class="btn btn-primary" data-nnit-action="showSection" data-nnit-arg="marketplace">Browse Jobs</button>
+      <button class="btn btn-ghost" data-nnit-action="openAuth" data-nnit-arg="register">Join as Freelancer</button>
     </div>
   </div>
 
@@ -835,17 +835,17 @@
 
   <!-- MAIN TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="showSection('marketplace')">?? Marketplace</button>
-    <button class="tab" onclick="showSection('plans')">?? Plans</button>
-    <button class="tab" onclick="showSection('freelancers')">?? Freelancers</button>
-    <button class="tab" onclick="showSection('notifications')">?? Notifications</button>
+    <button class="tab active" data-nnit-action="showSection" data-nnit-arg="marketplace">?? Marketplace</button>
+    <button class="tab" data-nnit-action="showSection" data-nnit-arg="plans">?? Plans</button>
+    <button class="tab" data-nnit-action="showSection" data-nnit-arg="freelancers">?? Freelancers</button>
+    <button class="tab" data-nnit-action="showSection" data-nnit-arg="notifications">?? Notifications</button>
   </div>
 
   <!-- MARKETPLACE -->
   <div class="content-section active" id="section-marketplace">
     <div class="section-header">
       <div class="section-title">Available Projects</div>
-      <button class="post-job-btn" onclick="togglePostJob()">+ Post Project</button>
+      <button class="post-job-btn" data-nnit-action="togglePostJob">+ Post Project</button>
     </div>
 
     <!-- Post Job Form -->
@@ -870,7 +870,7 @@
             <input type="text" id="jobSkills" placeholder="React, Node.js, CSS" />
           </div>
         </div>
-        <button class="btn btn-primary" onclick="postJob()">Post Project</button>
+        <button class="btn btn-primary" data-nnit-action="postJob">Post Project</button>
       </div>
     </div>
 
@@ -898,7 +898,7 @@
           <li>Email support</li>
           <li>Payment processing</li>
         </ul>
-        <button class="btn btn-ghost" style="width:100%" onclick="subscribe('basic')">Get Started</button>
+        <button class="btn btn-ghost" style="width:100%" data-nnit-action="subscribe" data-nnit-arg="basic">Get Started</button>
       </div>
       <div class="plan-card featured">
         <div class="plan-badge">Most Popular</div>
@@ -912,7 +912,7 @@
           <li>Priority support</li>
           <li>Advanced analytics</li>
         </ul>
-        <button class="btn btn-primary" onclick="subscribe('pro')">Get Pro</button>
+        <button class="btn btn-primary" data-nnit-action="subscribe" data-nnit-arg="pro">Get Pro</button>
       </div>
       <div class="plan-card">
         <div class="plan-name">Client Premium</div>
@@ -925,7 +925,7 @@
           <li>Dedicated account manager</li>
           <li>Custom integrations</li>
         </ul>
-        <button class="btn btn-ghost" style="width:100%" onclick="subscribe('client')">Get Premium</button>
+        <button class="btn btn-ghost" style="width:100%" data-nnit-action="subscribe" data-nnit-arg="client">Get Premium</button>
       </div>
     </div>
   </div>
@@ -961,7 +961,7 @@
             <label>Experience (years)</label>
             <input type="number" id="flExp" placeholder="3" />
           </div>
-          <button class="btn btn-primary" onclick="registerFreelancer()">Register as Freelancer</button>
+          <button class="btn btn-primary" data-nnit-action="registerFreelancer">Register as Freelancer</button>
         </div>
       </div>
       <div>
@@ -978,8 +978,8 @@
     <div class="section-header">
       <div class="section-title">Notifications & Audit</div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" onclick="loadNotifications()" style="font-size:0.82rem;padding:7px 14px">Load Notifications</button>
-        <button class="btn btn-ghost" onclick="loadAudit()" style="font-size:0.82rem;padding:7px 14px">Load Audit Logs</button>
+        <button class="btn btn-ghost" data-nnit-action="loadNotifications" style="font-size:0.82rem;padding:7px 14px">Load Notifications</button>
+        <button class="btn btn-ghost" data-nnit-action="loadAudit" style="font-size:0.82rem;padding:7px 14px">Load Audit Logs</button>
       </div>
     </div>
     <div id="notifsList">
@@ -1144,7 +1144,7 @@
           </div>
           <div class="job-footer">
             <span class="job-meta">Posted ${new Date(job.createdAt || Date.now()).toLocaleDateString()}</span>
-            <button class="btn btn-success" style="padding:6px 14px;font-size:0.8rem" onclick="applyJob('${job._id}')">Apply Now</button>
+            <button class="btn btn-success" style="padding:6px 14px;font-size:0.8rem" data-nnit-action="applyJob" data-nnit-job="${encodeURIComponent(String(job._id))}">Apply Now</button>
           </div>
         </div>
       `).join('');
@@ -1249,6 +1249,20 @@
       toast(res.message || 'Could not start checkout', 'error');
     }
   }
+
+  // NNIT_CSP_EVENTS_V1: no eval and no inline event handlers.
+  const nnitActions = { showSection, loadProfile, logout, openAuth, closeAuth, switchAuthTab, doLogin, doRegister, togglePostJob, postJob, subscribe, registerFreelancer, loadNotifications, loadAudit, applyJob };
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-nnit-action]');
+    if (!button) return;
+    const action = button.dataset.nnitAction;
+    if (!Object.prototype.hasOwnProperty.call(nnitActions, action)) return;
+    event.preventDefault();
+    const arg = action === 'applyJob'
+      ? decodeURIComponent(button.dataset.nnitJob || '') : button.dataset.nnitArg;
+    Promise.resolve().then(() => nnitActions[action](arg))
+      .catch(() => toast('Request failed. Please try again.', 'error'));
+  });
 
   // ---- INIT ----
   if (token) {
