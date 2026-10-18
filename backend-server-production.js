@@ -39,6 +39,16 @@ const {
 } = require('./backend-logging-system');
 
 securityMiddleware(app);
+// NNIT_ACCOUNT_LINK_V1: keep the explicit account-connect popup in its opener group.
+app.use((req,res,next) => {
+  if (req.path === '/' && req.query['nnit-connect'] === '1') {
+    res.setHeader('Cross-Origin-Opener-Policy','unsafe-none');
+    res.setHeader('Cache-Control','no-store');
+  }
+  next();
+});
+app.get('/nnit-enterprise-connect.js',(req,res) => res.sendFile(path.join(__dirname,'nnit-enterprise-connect.js')));
+app.use('/api/enterprise-link',require('./routes/enterpriseLink'));
 app.use(morganMiddleware);
 app.use(requestLogger);
 app.use(successLogger);
