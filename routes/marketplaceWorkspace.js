@@ -130,4 +130,6 @@ router.get('/notifications', run(async (req, res) => {
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 100);
   res.json({ success: true, notifications });
 }));
+// NNIT_DELIVERY_V1
+router.use(require('./workDelivery'));
 module.exports = router;
