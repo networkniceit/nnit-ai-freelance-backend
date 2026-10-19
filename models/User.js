@@ -49,7 +49,9 @@ const userSchema = new mongoose.Schema({
     },
     stripeCustomerId: String,
     stripeSubscriptionId: String,
-    currentPeriodEnd: Date
+    currentPeriodEnd: Date,
+    lastStripeEventCreated: Number,
+    lastStripeEventId: String
   },
   createdAt: {
     type: Date,

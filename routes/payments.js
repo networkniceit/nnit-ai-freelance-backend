@@ -1,58 +1,27 @@
-// Stripe payment integration (Node.js/Express)
+// NNIT Freelancer Payments
 const express = require('express');
 const router = express.Router();
 const Stripe = require('stripe');
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY); // Set your Stripe secret key in env
 const { authenticateJWT } = require('../middleware/authenticateJWT');
+const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
-// Withdraw endpoint
+router.get('/', (req, res) => res.json({ success: true, service: 'NNIT Freelancer Payments', stripeConfigured: !!stripe, webhookConfigured: !!process.env.STRIPE_WEBHOOK_SECRET }));
+
 router.post('/withdraw', authenticateJWT, async (req, res) => {
-    const { amount, currency, destination } = req.body;
-    try {
-        // Create a payout (to bank or card)
-        const payout = await stripe.payouts.create({
-            amount: Math.floor(amount * 100), // Stripe uses cents
-            currency,
-            destination, // Stripe account or card ID
-        });
-        res.json({ message: 'Payout initiated', payout });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  if (!stripe) return res.status(503).json({ success: false, error: 'Stripe is not configured' });
+  const { amount, currency, destination } = req.body;
+  if (!amount || !currency || !destination) return res.status(400).json({ success: false, error: 'amount, currency and destination are required' });
+  try {
+    const payout = await stripe.payouts.create({ amount: Math.floor(Number(amount) * 100), currency, destination });
+    res.json({ success: true, message: 'Payout initiated', payout });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-
-// Create a Stripe Checkout session for subscription
-router.post('/create-subscription-session', authenticateJWT, async (req, res) => {
-    try {
-        const { priceId } = req.body;
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            mode: 'subscription',
-            line_items: [{ price: priceId, quantity: 1 }],
-            customer_email: req.user.email,
-            success_url: `${process.env.FRONTEND_URL}/standalone?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL}/standalone`,
-        });
-        res.json({ url: session.url });
-    } catch (err) {
-        console.error('Stripe subscription session error:', err);
-        res.status(500).json({ error: 'Failed to create subscription session', details: err.message });
-    }
-});
-
-// Webhook endpoint for Stripe events
-router.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    let event;
-    try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
-        console.error('Stripe webhook error:', err);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-    // Handle subscription events here (e.g., update user subscription status)
-    res.json({ received: true });
-});
-
+// NNIT_SUBSCRIPTIONS_V1: saved account-bound billing status.
+const billing = require('../services/nnitBilling');
+const { protect } = require('../middleware/auth');
+router.post('/create-subscription-session', protect, billing.checkout);
+router.get('/subscription', protect, billing.status);
+router.post('/portal', protect, billing.portal);
+router.post('/webhook', express.raw({type:'application/json'}), billing.webhook);
 module.exports = router;

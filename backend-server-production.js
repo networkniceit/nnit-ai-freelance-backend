@@ -13,6 +13,8 @@ app.use(helmet({ contentSecurityPolicy: false }));
 
 // Body parsers
 app.set('trust proxy', 1);
+// NNIT_SUBSCRIPTIONS_V1: Stripe signature verification requires original request bytes.
+app.post('/api/payments/webhook', express.raw({type:'application/json',limit:'1mb'}), require('./services/nnitBilling').webhook);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

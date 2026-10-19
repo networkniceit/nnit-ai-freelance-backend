@@ -12,7 +12,7 @@ const authenticateJWT = function(req, res, next) {
   const token = authHeader.split(' ')[1];
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({ message: 'whsec_uzB4JOa1dKevpwHBNxiPJo0dtKU2YP0o' });
+      return res.status(403).json({ message: 'Invalid or expired token' });
     }
     req.user = user;
     next();
