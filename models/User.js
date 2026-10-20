@@ -50,6 +50,8 @@ const userSchema = new mongoose.Schema({
     stripeCustomerId: String,
     stripeSubscriptionId: String,
     currentPeriodEnd: Date,
+    cancelAtPeriodEnd: Boolean,
+    cancelAt: Date,
     lastStripeEventCreated: Number,
     lastStripeEventId: String
   },

@@ -42,7 +42,53 @@ async function checkout(req,res){
   if(!session.url)throw Error('No checkout URL');res.json({success:true,url:session.url});
  }catch(e){return fail(res,503,'Checkout could not be prepared. No payment was confirmed.');}
 }
-async function status(req,res){try{const user=await User.findById(accountId(req)).select('subscription').lean();if(!user)return fail(res,401,'Account not found.');res.set('Cache-Control','no-store');res.json({success:true,subscription:user.subscription||{plan:'free',status:'inactive'}});}catch{return fail(res,503,'Saved billing status unavailable.');}}
+function cancellationFields(sub) {
+  const scheduled = ['active','trialing'].includes(sub.status);
+  const periods = (sub.items?.data || []).map(i=>i.current_period_end).filter(Number.isFinite);
+  const end = Number.isFinite(sub.current_period_end) ? sub.current_period_end :
+    periods.length ? Math.max(...periods) : null;
+  const at = scheduled && Number.isFinite(sub.cancel_at) ? sub.cancel_at :
+    scheduled && sub.cancel_at_period_end === true ? end : null;
+  return {
+    'subscription.cancelAtPeriodEnd': scheduled && sub.cancel_at_period_end === true,
+    'subscription.cancelAt': at ? new Date(at * 1000) : null
+  };
+}
+async function status(req,res) {
+  try {
+    let user = await User.findById(accountId(req)).select('subscription').lean();
+    if (!user) return fail(res,401,'Account not found.');
+    const saved = user.subscription;
+    // Backfill cancellation scheduled before these fields were introduced.
+    if (saved?.stripeSubscriptionId && saved.cancelAtPeriodEnd === undefined) {
+      if (!stripe) return fail(res,503,'Stripe billing verification unavailable.');
+      const sub = await stripe.subscriptions.retrieve(saved.stripeSubscriptionId);
+      if (identity(sub.customer) !== saved.stripeCustomerId ||
+          sub.id !== saved.stripeSubscriptionId)
+        throw Error('Subscription account mismatch');
+      const filter = {
+        _id: user._id,
+        'subscription.stripeCustomerId': saved.stripeCustomerId,
+        'subscription.stripeSubscriptionId': saved.stripeSubscriptionId,
+        'subscription.cancelAtPeriodEnd': {$exists:false}
+      };
+      filter['subscription.lastStripeEventCreated'] =
+        saved.lastStripeEventCreated === undefined ?
+          {$exists:false} : saved.lastStripeEventCreated;
+      filter['subscription.lastStripeEventId'] =
+        saved.lastStripeEventId === undefined ?
+          {$exists:false} : saved.lastStripeEventId;
+      await User.updateOne(filter, {$set:cancellationFields(sub)}, {runValidators:true});
+      user = await User.findById(accountId(req)).select('subscription').lean();
+      if (!user || user.subscription?.cancelAtPeriodEnd === undefined)
+        return fail(res,503,'Billing changed during verification. Refresh billing status again.');
+    }
+    res.set('Cache-Control','no-store');
+    return res.json({success:true,subscription:user.subscription || {plan:'free',status:'inactive'}});
+  } catch {
+    return fail(res,503,'Saved billing status unavailable. Please refresh again.');
+  }
+}
 async function portal(req,res){if(!stripe)return fail(res,503,'Stripe is not configured.');try{const user=await User.findById(accountId(req)).select('subscription').lean();const customer=user?.subscription?.stripeCustomerId;if(!customer)return fail(res,409,'No linked Stripe customer.');const session=await stripe.billingPortal.sessions.create({customer,return_url:origin()+'/freelancer'});res.json({success:true,url:session.url});}catch{return fail(res,503,'Billing management unavailable.');}}
 async function webhook(req,res){
  if(!stripe||!process.env.STRIPE_WEBHOOK_SECRET)return fail(res,503,'Webhook not configured.');
@@ -75,6 +121,7 @@ async function webhook(req,res){
   const end=Number.isFinite(sub.current_period_end)?sub.current_period_end:ends.length?Math.max(...ends):null;
   const update={'subscription.plan':active?plan.plan:'free','subscription.status':sub.status==='trialing'?'trial':active?'active':sub.status==='canceled'?'cancelled':'inactive',
    'subscription.stripeCustomerId':customer,'subscription.stripeSubscriptionId':sub.id,'subscription.currentPeriodEnd':end?new Date(end*1000):null,
+   ...cancellationFields(sub),
    'subscription.lastStripeEventCreated':event.created,'subscription.lastStripeEventId':event.id};
   const saved=await User.updateOne({_id:user._id,'subscription.stripeCustomerId':customer,...(user.subscription?.stripeSubscriptionId?{'subscription.stripeSubscriptionId':user.subscription.stripeSubscriptionId}:{}),
    $or:[{'subscription.lastStripeEventCreated':{$exists:false}},{'subscription.lastStripeEventCreated':{$lte:event.created}}]},{$set:update},{runValidators:true});
