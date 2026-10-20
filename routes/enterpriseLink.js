@@ -26,7 +26,7 @@ async function enterpriseIdentity(token) {
   }
   let response;
   try {
-    response = await fetch('https://nnit-enterprise-production.up.railway.app/api/dashboard/stats', {
+    response = await fetch('https://nnit-enterprise-production.up.railway.app/api/auth/session', {
       headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
       redirect: 'error', signal: AbortSignal.timeout(10000)
     });
@@ -34,7 +34,7 @@ async function enterpriseIdentity(token) {
   if ([401,403].includes(response.status)) throw Object.assign(new Error('Enterprise rejected this session. Sign in to Enterprise again.'), { status: 401 });
   if (response.status !== 200) throw Object.assign(new Error('Enterprise verification unavailable.'), { status: 503 });
   const body = await response.json();
-  if (body.success !== true || !body.stats || typeof body.stats !== 'object') throw Object.assign(new Error('Unexpected Enterprise verification response.'), { status: 503 });
+  if (body.success !== true || !body.user || String(body.user.id) !== String(id)) throw Object.assign(new Error('Unexpected Enterprise verification response.'), { status: 503 });
   // Claims become trusted only after the fixed Enterprise server accepts this exact token.
   return String(id);
 }
