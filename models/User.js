@@ -1,4 +1,4 @@
-// NNIT - User Model for MongoDB 
+// NNIT - User Model for MongoDB
 // Location: models/User.js
 
 const mongoose = require('mongoose');
@@ -50,6 +50,7 @@ const userSchema = new mongoose.Schema({
     stripeCustomerId: String,
     stripeSubscriptionId: String,
     currentPeriodEnd: Date,
+    applicationWriteVersion: Number,
     cancelAtPeriodEnd: Boolean,
     cancelAt: Date,
     lastStripeEventCreated: Number,
@@ -104,4 +105,4 @@ userSchema.methods.toJSON = function() {
 
 const User = mongoose.model('User', userSchema);
 
-module.exports = User; 
+module.exports = User;

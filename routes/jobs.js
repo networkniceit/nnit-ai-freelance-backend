@@ -40,38 +40,6 @@ router.post('/', authenticateJWT, async (req, res) => {
 });
 
 const JobApplication = require('../models/JobApplication');
-router.post('/:id/apply', authenticateJWT, async (req, res) => {
-  try {
-    const owner = req.user && (req.user.id || req.user._id || req.user.sub);
-    if (!owner) return res.status(401).json({ success: false, message: 'Account ID missing from verified session.' });
-    if (!/^[0-9a-f]{24}$/i.test(req.params.id || '')) {
-      return res.status(400).json({ success: false, message: 'Invalid project ID.' });
-    }
-    if (Job.db.readyState !== 1 || JobApplication.db.readyState !== 1) {
-      return res.status(503).json({ success: false, message: 'Application database temporarily unavailable.' });
-    }
-    const job = await Job.findById(req.params.id).select('_id status').lean();
-    if (!job) return res.status(404).json({ success: false, message: 'Project not found.' });
-    if (job.status === 'closed') return res.status(409).json({ success: false, message: 'This project is closed to new applications.' });
-    await JobApplication.init();
-    const application = await JobApplication.create({
-      jobId: job._id, applicantId: String(owner), status: 'pending'
-    });
-    return res.status(201).json({
-      success: true, message: 'Application saved.',
-      application: {
-        id: application._id, jobId: application.jobId,
-        status: application.status, createdAt: application.createdAt
-      }
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({ success: false, message: 'You have already applied to this project.' });
-    }
-    return res.status(503).json({
-      success: false,
-      message: 'Application was not confirmed saved. Check before retrying.'
-    });
-  }
-});
+// NNIT_PLAN_ACCESS_V1
+router.post('/:id/apply', require('../middleware/auth').protect, require('../services/nnitPlanAccess').submit);
 module.exports = router;

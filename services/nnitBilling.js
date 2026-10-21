@@ -84,7 +84,8 @@ async function status(req,res) {
         return fail(res,503,'Billing changed during verification. Refresh billing status again.');
     }
     res.set('Cache-Control','no-store');
-    return res.json({success:true,subscription:user.subscription || {plan:'free',status:'inactive'}});
+    const access=await require('./nnitPlanAccess').usage(user);
+    return res.json({success:true,subscription:user.subscription || {plan:'free',status:'inactive'},access});
   } catch {
     return fail(res,503,'Saved billing status unavailable. Please refresh again.');
   }
