@@ -24,9 +24,9 @@ router.get('/summary', run(async (req, res) => {
   ]);
   res.json({ success: true, projects, freelancers });
 }));
+// NNIT_FEATURED_PRO_V1: paid placement only; no verified-rating claim.
 router.get('/freelancers', run(async (req, res) => {
-  const freelancers = await Profile.find({ available: true }).select(publicProfile)
-    .sort({ updatedAt: -1, _id: -1 }).limit(100).lean();
+  const freelancers = await require('../services/nnitFeaturedProfiles').list();
   res.json({ success: true, freelancers });
 }));
 router.use(protect);
