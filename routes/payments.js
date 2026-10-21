@@ -7,14 +7,13 @@ const stripe = process.env.STRIPE_SECRET_KEY ? Stripe(process.env.STRIPE_SECRET_
 
 router.get('/', (req, res) => res.json({ success: true, service: 'NNIT Freelancer Payments', stripeConfigured: !!stripe, webhookConfigured: !!process.env.STRIPE_WEBHOOK_SECRET }));
 
-router.post('/withdraw', authenticateJWT, async (req, res) => {
-  if (!stripe) return res.status(503).json({ success: false, error: 'Stripe is not configured' });
-  const { amount, currency, destination } = req.body;
-  if (!amount || !currency || !destination) return res.status(400).json({ success: false, error: 'amount, currency and destination are required' });
-  try {
-    const payout = await stripe.payouts.create({ amount: Math.floor(Number(amount) * 100), currency, destination });
-    res.json({ success: true, message: 'Payout initiated', payout });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+// NNIT_WITHDRAWAL_GUARD_V1
+router.post('/withdraw', require('../middleware/auth').protect, (req, res) => {
+  return res.status(409).json({
+    success: false,
+    code: 'WITHDRAWALS_NOT_ENABLED',
+    error: 'Withdrawals are not enabled. Verified earnings and an account-owned payout destination are required.'
+  });
 });
 
 // NNIT_SUBSCRIPTIONS_V1: saved account-bound billing status.
