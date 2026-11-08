@@ -16,12 +16,6 @@ router.post('/fix-categories', async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-router.post('/nuke', async (req, res) => {
-  try {
-    const result = await global.pgPool.query('DELETE FROM products WHERE id > 0');
-    res.json({ success: true, message: "Nuked!", deleted: result.rowCount });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
 
 
 router.get('/count', async (req, res) => {
