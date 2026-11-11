@@ -1,7 +1,14 @@
 ﻿const express = require('express');
 const router = express.Router();
 
-router.post('/setup', async (req, res) => {
+// Only the owner (header x-admin-key) may change products. Reading stays public.
+const requireAdminKey = (req, res, next) => {
+  const k = process.env.SHOP_ADMIN_KEY;
+  if (!k || req.get('x-admin-key') !== k) return res.status(401).json({ success: false, message: 'Admin key required' });
+  next();
+};
+
+router.post('/setup', requireAdminKey, async (req, res) => {
   try {
     await global.pgPool.query(`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255), category VARCHAR(100), price DECIMAL(10,2), original_price DECIMAL(10,2), rating INTEGER DEFAULT 4, description TEXT, badge VARCHAR(50), image TEXT, created_at TIMESTAMP DEFAULT NOW())`);
     await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT');
@@ -9,7 +16,7 @@ router.post('/setup', async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-router.post('/fix-categories', async (req, res) => {
+router.post('/fix-categories', requireAdminKey, async (req, res) => {
   try {
     await global.pgPool.query("UPDATE products SET category=LOWER(category)");
     res.json({ success: true, message: 'Categories fixed!' });
@@ -32,7 +39,7 @@ router.get('/', async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAdminKey, async (req, res) => {
   try {
     const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
     const { rows } = await global.pgPool.query(
@@ -43,7 +50,7 @@ router.post('/', async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdminKey, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
@@ -55,7 +62,7 @@ router.put('/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdminKey, async (req, res) => {
   try {
     const { id } = req.params;
     await global.pgPool.query('DELETE FROM products WHERE id=$1', [id]);
