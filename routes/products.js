@@ -12,6 +12,7 @@ router.post('/setup', requireAdminKey, async (req, res) => {
   try {
     await global.pgPool.query(`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255), category VARCHAR(100), price DECIMAL(10,2), original_price DECIMAL(10,2), rating INTEGER DEFAULT 4, description TEXT, badge VARCHAR(50), image TEXT, created_at TIMESTAMP DEFAULT NOW())`);
     await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT');
+    await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS link TEXT');
     res.json({ success: true, message: 'Products table ready!' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -41,10 +42,10 @@ router.get('/', async (req, res) => {
 
 router.post('/', requireAdminKey, async (req, res) => {
   try {
-    const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
+    const { name, category, price, originalPrice, rating, description, badge, image, link } = req.body;
     const { rows } = await global.pgPool.query(
-      'INSERT INTO products (name, category, price, original_price, rating, description, badge, image) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
-      [name, category, price, originalPrice, rating || 4, description || '', badge || 'NEW', image]
+      'INSERT INTO products (name, category, price, original_price, rating, description, badge, image, link) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+      [name, category, price, originalPrice, rating || 4, description || '', badge || 'NEW', image, link || null]
     );
     res.json({ success: true, product: rows[0] });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
@@ -53,10 +54,10 @@ router.post('/', requireAdminKey, async (req, res) => {
 router.put('/:id', requireAdminKey, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, price, originalPrice, rating, description, badge, image } = req.body;
+    const { name, category, price, originalPrice, rating, description, badge, image, link } = req.body;
     const { rows } = await global.pgPool.query(
-      'UPDATE products SET name=COALESCE($1,name), category=COALESCE($2,category), price=COALESCE($3,price), original_price=COALESCE($4,original_price), rating=COALESCE($5,rating), description=COALESCE($6,description), badge=COALESCE($7,badge), image=COALESCE($8,image) WHERE id=$9 RETURNING *',
-      [name, category, price, originalPrice, rating, description, badge, image, id]
+      'UPDATE products SET name=COALESCE($1,name), category=COALESCE($2,category), price=COALESCE($3,price), original_price=COALESCE($4,original_price), rating=COALESCE($5,rating), description=COALESCE($6,description), badge=COALESCE($7,badge), image=COALESCE($8,image), link=COALESCE($9,link) WHERE id=$10 RETURNING *',
+      [name, category, price, originalPrice, rating, description, badge, image, link, id]
     );
     res.json({ success: true, product: rows[0] });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
