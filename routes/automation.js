@@ -254,15 +254,28 @@ async function cycle() {
 })();
 
 // ---------- access: admin login token, or the shop admin key ----------
-function admin(req, res, next) {
+async function admin(req, res, next) {
   const key = process.env.SHOP_ADMIN_KEY;
   if (key && req.headers['x-admin-key'] === key) return next();
+  const admins = String(process.env.ADMIN_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
   const h = req.headers.authorization || '';
   if (h.startsWith('Bearer ')) {
     try {
       const u = require('jsonwebtoken').verify(h.slice(7), process.env.JWT_SECRET);
-      const admins = String(process.env.ADMIN_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
       if (u.role === 'admin' || admins.includes(String(u.email || '').toLowerCase())) { req.user = u; return next(); }
+    } catch (_) { /* fall through */ }
+  }
+  // Owner signed in to NNIT Enterprise: the Enterprise server confirms the session and the account.
+  const et = String(req.headers['x-enterprise-token'] || '');
+  if (et && et.length < 16384) {
+    try {
+      const r = await fetch('https://nnit-enterprise-production.up.railway.app/api/auth/session', {
+        headers: { Authorization: 'Bearer ' + et, Accept: 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(10000) });
+      if (r.status === 200) {
+        const b = await r.json();
+        const u = b && b.success === true && b.user;
+        if (u && (String(u.role || '').toLowerCase() === 'admin' || admins.includes(String(u.email || '').toLowerCase()))) { req.user = u; return next(); }
+      }
     } catch (_) { /* fall through */ }
   }
   return res.status(401).json({ success: false, message: 'Admin access required' });
@@ -292,10 +305,27 @@ router.get('/applications', async (req, res) => {
   res.json({ success: true, applications: r.rows });
 });
 router.put('/applications/:id', admin, async (req, res) => {
-  const st = String((req.body || {}).status || '');
-  if (!['ready', 'sent', 'won', 'lost', 'rejected'].includes(st)) return res.status(400).json({ success: false, message: 'Bad status' });
-  await pool().query(`UPDATE auto_applications SET status=$1, updated_at=NOW() WHERE id=$2`, [st, req.params.id]);
+  const body = req.body || {};
+  const st = String(body.status || '');
+  if (!['ready', 'sent', 'replied', 'won', 'lost', 'rejected'].includes(st)) return res.status(400).json({ success: false, message: 'Bad status' });
+  let amount = null;
+  if (st === 'won') {
+    amount = Number(body.amount);
+    if (!Number.isFinite(amount) || amount < 0 || amount > 1e7) return res.status(400).json({ success: false, message: 'Enter the amount you were paid or will be paid, in EUR.' });
+  }
+  await pool().query('ALTER TABLE auto_applications ADD COLUMN IF NOT EXISTS amount_eur NUMERIC');
+  await pool().query(`UPDATE auto_applications SET status=$1, amount_eur=$3, updated_at=NOW() WHERE id=$2`, [st, req.params.id, amount]);
   res.json({ success: true });
+});
+router.get('/money', async (req, res) => {
+  try {
+    await pool().query('ALTER TABLE auto_applications ADD COLUMN IF NOT EXISTS amount_eur NUMERIC');
+    const c = await pool().query(`SELECT status, COUNT(*)::int n, COALESCE(SUM(amount_eur),0)::float eur FROM auto_applications GROUP BY status`);
+    const by = {}; let eur = 0;
+    for (const r of c.rows) { by[r.status] = r.n; eur += r.eur; }
+    const jobs = (await pool().query('SELECT COUNT(*)::int n FROM auto_jobs')).rows[0].n;
+    res.json({ success: true, jobs, ready: by.ready || 0, sent: by.sent || 0, replied: by.replied || 0, won: by.won || 0, lost: (by.lost || 0) + (by.rejected || 0), earnedEur: eur });
+  } catch (e) { res.status(503).json({ success: false, message: e.message }); }
 });
 router.put('/toggle', admin, async (req, res) => {
   const { auto_scrape, auto_apply } = req.body || {};
