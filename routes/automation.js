@@ -149,7 +149,7 @@ async function saveJobs(jobs) {
       [j.external_id, j.title, j.description, j.budget, j.platform, j.job_type, j.difficulty, j.url, j.posted_date, j.ai_confidence]);
     inserted += r.rowCount;
   }
-  mirrorJobs(jobs.filter(j => j.title && j.url && isFit(j))).catch(() => {});
+  // disabled 20 Nov: one database only (Enterprise Supabase) -- mirrorJobs(jobs.filter(j => j.title && j.url && isFit(j))).catch(() => {});
   return inserted;
 }
 
@@ -248,9 +248,8 @@ async function cycle() {
     }
   } catch (e) { log('tidy skipped:', e.message); }
   if (timer) clearInterval(timer);
-  timer = setInterval(() => cycle().catch(() => {}), INTERVAL_MIN * 60 * 1000);
-  setTimeout(() => cycle().catch(() => {}), 20000);
-  setTimeout(() => mirrorAll().catch(() => {}), 30000);
+  // 20 Nov 2026: the job engine now runs inside NNIT Enterprise (one database). This copy stays idle; its saved rows are kept.
+  // disabled 20 Nov: one database only -- setTimeout(() => mirrorAll().catch(() => {}), 30000);
 })();
 
 // ---------- access: admin login token, or the shop admin key ----------
