@@ -6,10 +6,12 @@ let tableReady = null;
 // If the table is empty (new database), refill it from the saved catalog so the shop is never empty.
 async function seedIfEmpty() {
   const { rows } = await global.pgPool.query('SELECT COUNT(*)::int AS n FROM products');
-  if (rows[0].n > 0) return;
   let list = [];
   try { list = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data', 'shop-products.json'), 'utf8')); } catch (e) { return; }
+  if (rows[0].n >= list.length) return;
+  const have = new Set((await global.pgPool.query('SELECT name FROM products')).rows.map(r => r.name));
   for (const p of list) {
+    if (have.has(p.name)) continue;
     await global.pgPool.query('INSERT INTO products (name, category, price, original_price, rating, description, badge, image, link) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
       [p.name, String(p.category || '').toLowerCase(), p.price, p.originalPrice, 4, p.description || '', p.badge || 'NEW', p.image, p.link || null]);
   }
