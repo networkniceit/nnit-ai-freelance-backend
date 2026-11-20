@@ -89,7 +89,7 @@ function rssItems(xml) {
 }
 async function fromRemotive(kw) {
   const r = await get('https://remotive.com/api/remote-jobs?limit=40&search=' + encodeURIComponent(kw));
-  return (r.data.jobs || []).slice(0, 60).map(j => mk({ external_id: 'remotive-' + j.id, title: j.title, description: j.description, budget: j.salary || 'Not specified', platform: 'Remotive', url: j.url, posted_date: j.publication_date }));
+  return (r.data.jobs || []).map(j => mk({ external_id: 'remotive-' + j.id, title: j.title, description: j.description, budget: j.salary || 'Not specified', platform: 'Remotive', url: j.url, posted_date: j.publication_date }));
 }
 async function fromRemoteOK() {
   const r = await get('https://remoteok.com/api');
@@ -110,10 +110,14 @@ async function fromUpwork(kw) {
   return rssItems(r.data).map(i => { const b = i.description.match(/\$[\d,]+/); return mk({ external_id: 'upwork-' + i.guid, title: i.title, description: i.description, budget: b ? b[0] : 'Not specified', platform: 'Upwork', url: i.link, posted_date: i.pubDate }); });
 }
 
+const FITS = /(develop|engineer|programmer|software|full.?stack|front.?end|back.?end|react|node|python|javascript|typescript|web|api|devops|data|machine learning|\bml\b|\bai\b|automation|mobile|android|ios|\bqa\b|test|cloud|security|sre|wordpress|ui\b|ux\b|designer|freelance)/i;
+const NOT_FITS = /(sales|account manager|account executive|recruit|talent|customer success|customer support|support specialist|marketing manager|accountant|legal|counsel|finance manager|hr |people partner|director|vp |head of|chief)/i;
+const isFit = j => FITS.test(j.title) && !NOT_FITS.test(j.title);
+
 async function saveJobs(jobs) {
   let inserted = 0;
   for (const j of jobs) {
-    if (!j.title || !j.url) continue;
+    if (!j.title || !j.url || !isFit(j)) continue;
     const r = await pool().query(
       `INSERT INTO auto_jobs (external_id,title,description,budget,platform,job_type,difficulty,url,posted_date,ai_confidence)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (external_id) DO NOTHING`,
@@ -142,7 +146,7 @@ async function runScrape() {
 
 // ---------- proposals ----------
 function profileFor(title, desc) {
-  const t = (title + ' ' + desc).toLowerCase();
+  const t = String(title || '').toLowerCase() + ' ' + (/(devops|aws|terraform|kubernetes|docker|react native|android|ios|wordpress)/i.test(title || '') ? String(desc || '').toLowerCase() : '');
   if (/\b(devops|aws|terraform|kubernetes|docker|ci\/?cd)\b/.test(t)) return { skills: ['AWS', 'Docker/Kubernetes', 'CI/CD'], q: 'What is the current infrastructure setup and your top priority for the first week?' };
   if (/\b(copywriter|content writer|blog|seo|newsletter)\b/.test(t)) return { skills: ['SEO content writing', 'Research & outlining', 'Editing & tone matching'], q: 'Do you have a preferred tone and examples of content you like?' };
   if (/\b(react native|ios|android|mobile app|expo)\b/.test(t)) return { skills: ['React Native', 'Performance tuning', 'Release readiness'], q: 'What are the top issues right now and do you have crash logs?' };
@@ -202,6 +206,18 @@ async function cycle() {
   for (let i = 0; i < 10; i++) {
     try { await ensureTables(); break; } catch (e) { state.lastError = e.message; await new Promise(r => setTimeout(r, 5000)); }
   }
+  try { // ONE-TIME tidy (runs once, then never again): drop jobs that do not fit a developer and re-make proposals written with the old skills list
+    await pool().query('ALTER TABLE auto_settings ADD COLUMN IF NOT EXISTS tidy_v INT DEFAULT 0');
+    const v = (await pool().query('SELECT tidy_v FROM auto_settings WHERE id=1')).rows[0].tidy_v || 0;
+    if (v < 1) {
+      const all = (await pool().query('SELECT id, title FROM auto_jobs')).rows;
+      const bad = all.filter(r => !isFit(r)).map(r => r.id);
+      if (bad.length) await pool().query('DELETE FROM auto_jobs WHERE id = ANY($1::int[])', [bad]);
+      await pool().query(`DELETE FROM auto_applications WHERE status='ready'`);
+      await pool().query(`UPDATE auto_jobs SET status='available' WHERE status='applied' AND id NOT IN (SELECT job_id FROM auto_applications)`);
+      await pool().query('UPDATE auto_settings SET tidy_v=1 WHERE id=1');
+    }
+  } catch (e) { log('tidy skipped:', e.message); }
   if (timer) clearInterval(timer);
   timer = setInterval(() => cycle().catch(() => {}), INTERVAL_MIN * 60 * 1000);
   setTimeout(() => cycle().catch(() => {}), 20000);
