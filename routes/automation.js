@@ -177,6 +177,9 @@ function profileFor(title, desc) {
   if (/\b(copywriter|content writer|blog|seo|newsletter)\b/.test(t)) return { skills: ['SEO content writing', 'Research & outlining', 'Editing & tone matching'], q: 'Do you have a preferred tone and examples of content you like?' };
   if (/\b(react native|ios|android|mobile app|expo)\b/.test(t)) return { skills: ['React Native', 'Performance tuning', 'Release readiness'], q: 'What are the top issues right now and do you have crash logs?' };
   if (/\b(data entry|excel|spreadsheet|csv|scrap)/.test(t)) return { skills: ['Data entry', 'Excel/Sheets', 'Data cleaning'], q: 'What format do you want the final delivery in?' };
+  if (/\b(machine learning|ml|ai|llm|agentic|data engineer|data scientist|inference|nlp)\b/.test(t)) return { skills: ['Python & ML/LLM integration', 'Data pipelines & APIs', 'Production deployment'], q: 'Which data sources and models are involved, and what does success look like?' };
+  if (/\b(vue|react|front.?end|ui|ux|angular|next\.?js)\b/.test(t)) return { skills: ['React / Vue front-ends', 'Responsive UI', 'API integration'], q: 'Do you have designs or an existing codebase, and what is the first screen to deliver?' };
+  if (/\b(back.?end|node|api|python|django|rails|php|laravel|platform)\b/.test(t)) return { skills: ['Node.js / Python back-ends', 'REST APIs', 'PostgreSQL / MongoDB'], q: 'What is the current stack and the first service or endpoint you need delivered?' };
   return { skills: ['React', 'Node.js', 'Python / APIs'], q: 'What are the exact deliverables and your preferred timeline?' };
 }
 async function makeProposal(job) {
