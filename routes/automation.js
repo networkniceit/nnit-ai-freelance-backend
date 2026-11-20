@@ -114,6 +114,31 @@ const FITS = /(develop|engineer|programmer|software|full.?stack|front.?end|back.
 const NOT_FITS = /(sales|account manager|account executive|recruit|talent|customer success|customer support|support specialist|marketing manager|accountant|legal|counsel|finance manager|hr |people partner|director|vp |head of|chief)/i;
 const isFit = j => FITS.test(j.title) && !NOT_FITS.test(j.title);
 
+
+// Mirror found jobs into the marketplace database (MongoDB) so the Marketplace tab lists them and they persist.
+async function mirrorJobs(rows) {
+  try {
+    const Job = require('../models/Job');
+    if (!Job.db || Job.db.readyState !== 1) return 0;
+    let n = 0;
+    for (const j of rows) {
+      if (!j.title || !j.external_id) continue;
+      const bv = parseInt(String(j.budget || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      const desc = (String(j.description || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 9000) || j.title) +
+        '\n\nApply at the source: ' + (j.url || '') + (j.platform ? ' (' + j.platform + ')' : '');
+      const r = await Job.updateOne({ id: 'auto-' + j.external_id }, { $setOnInsert: {
+        id: 'auto-' + j.external_id, type: 'external', status: 'open', userId: 'nnit-automation',
+        title: String(j.title).slice(0, 200), description: desc, budget: bv, skills: [j.platform || 'Remote'].filter(Boolean)
+      } }, { upsert: true });
+      n += r.upsertedCount || 0;
+    }
+    return n;
+  } catch (e) { return 0; }
+}
+async function mirrorAll() {
+  try { const r = await pool().query('SELECT * FROM auto_jobs ORDER BY id DESC LIMIT 500'); return await mirrorJobs(r.rows); } catch (e) { return 0; }
+}
+
 async function saveJobs(jobs) {
   let inserted = 0;
   for (const j of jobs) {
@@ -124,6 +149,7 @@ async function saveJobs(jobs) {
       [j.external_id, j.title, j.description, j.budget, j.platform, j.job_type, j.difficulty, j.url, j.posted_date, j.ai_confidence]);
     inserted += r.rowCount;
   }
+  mirrorJobs(jobs.filter(j => j.title && j.url && isFit(j))).catch(() => {});
   return inserted;
 }
 
@@ -221,6 +247,7 @@ async function cycle() {
   if (timer) clearInterval(timer);
   timer = setInterval(() => cycle().catch(() => {}), INTERVAL_MIN * 60 * 1000);
   setTimeout(() => cycle().catch(() => {}), 20000);
+  setTimeout(() => mirrorAll().catch(() => {}), 30000);
 })();
 
 // ---------- access: admin login token, or the shop admin key ----------
