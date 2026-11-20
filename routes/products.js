@@ -1,6 +1,16 @@
 ﻿const express = require('express');
 const router = express.Router();
 
+// Make sure the products table always exists, so a fresh or restarted database never breaks the shop.
+let tableReady = null;
+router.use(async (req, res, next) => {
+  try {
+    if (!tableReady) tableReady = (async () => { await global.pgPool.query(`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255), category VARCHAR(100), price DECIMAL(10,2), original_price DECIMAL(10,2), rating INTEGER DEFAULT 4, description TEXT, badge VARCHAR(50), image TEXT, created_at TIMESTAMP DEFAULT NOW())`); await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT'); await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS link TEXT'); })();
+    await tableReady;
+  } catch (e) { tableReady = null; }
+  next();
+});
+
 // Only the owner (header x-admin-key) may change products. Reading stays public.
 const requireAdminKey = (req, res, next) => {
   const k = process.env.SHOP_ADMIN_KEY;
