@@ -3,27 +3,10 @@ const router = express.Router();
 
 // Make sure the products table always exists, so a fresh or restarted database never breaks the shop.
 let tableReady = null;
-// If the table is empty (new database), refill it from the saved catalog so the shop is never empty.
-async function seedIfEmpty() {
-  let data;
-  try { data = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data', 'shop-products.json'), 'utf8')); } catch (e) { return; }
-  const list = Array.isArray(data) ? data : (data.products || []), version = Array.isArray(data) ? 'legacy' : (data.version || 'v1');
-  await global.pgPool.query('CREATE TABLE IF NOT EXISTS shop_meta (key TEXT PRIMARY KEY, value TEXT)');
-  const cur = (await global.pgPool.query("SELECT value FROM shop_meta WHERE key='catalog_version'")).rows[0];
-  const n = (await global.pgPool.query('SELECT COUNT(*)::int AS n FROM products')).rows[0].n;
-  if (cur && cur.value === version && n > 0) return;
-  if (!list.length) return;
-  // New or changed saved catalog: replace the catalog so the shop matches it exactly, with no duplicates.
-  await global.pgPool.query('DELETE FROM products');
-  for (const p of list) {
-    await global.pgPool.query('INSERT INTO products (name, category, price, original_price, rating, description, badge, image, link) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-      [p.name, String(p.category || '').toLowerCase(), p.price, p.originalPrice, 4, p.description || '', p.badge || 'NEW', p.image, p.link || null]);
-  }
-  await global.pgPool.query("INSERT INTO shop_meta (key, value) VALUES ('catalog_version', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [version]);
-}
+// Catalogue imports must be explicit admin operations. Never replace products during a read or restart.
 router.use(async (req, res, next) => {
   try {
-    if (!tableReady) tableReady = (async () => { await global.pgPool.query(`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255), category VARCHAR(100), price DECIMAL(10,2), original_price DECIMAL(10,2), rating INTEGER DEFAULT 4, description TEXT, badge VARCHAR(50), image TEXT, created_at TIMESTAMP DEFAULT NOW())`); await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT'); await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS link TEXT'); await seedIfEmpty(); })();
+    if (!tableReady) tableReady = (async () => { await global.pgPool.query(`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255), category VARCHAR(100), price DECIMAL(10,2), original_price DECIMAL(10,2), rating INTEGER DEFAULT 4, description TEXT, badge VARCHAR(50), image TEXT, created_at TIMESTAMP DEFAULT NOW())`); await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT'); await global.pgPool.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS link TEXT'); })();
     await tableReady;
   } catch (e) { tableReady = null; }
   next();
