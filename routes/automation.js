@@ -146,7 +146,7 @@ async function runScrape() {
 
 // ---------- proposals ----------
 function profileFor(title, desc) {
-  const t = String(title || '').toLowerCase() + ' ' + (/(devops|aws|terraform|kubernetes|docker|react native|android|ios|wordpress)/i.test(title || '') ? String(desc || '').toLowerCase() : '');
+  const t = String(title || '').toLowerCase() + ' ' + (/(devops|aws|terraform|kubernetes|docker|react native|android|ios)/i.test(title || '') ? String(desc || '').toLowerCase() : '');
   if (/\b(devops|aws|terraform|kubernetes|docker|ci\/?cd)\b/.test(t)) return { skills: ['AWS', 'Docker/Kubernetes', 'CI/CD'], q: 'What is the current infrastructure setup and your top priority for the first week?' };
   if (/\b(copywriter|content writer|blog|seo|newsletter)\b/.test(t)) return { skills: ['SEO content writing', 'Research & outlining', 'Editing & tone matching'], q: 'Do you have a preferred tone and examples of content you like?' };
   if (/\b(react native|ios|android|mobile app|expo)\b/.test(t)) return { skills: ['React Native', 'Performance tuning', 'Release readiness'], q: 'What are the top issues right now and do you have crash logs?' };
