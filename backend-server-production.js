@@ -164,6 +164,7 @@ const paymentsRoutes = require('./routes/payments');
 const productRoutes = require('./routes/products');
 app.use('/api/products', productRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/automation', require('./routes/automation'));
 const auditLogRoutes = require('./routes/auditLog');
 app.use('/api/audit-log', auditLogRoutes);
 const notificationsRoutes = require('./routes/notifications');
